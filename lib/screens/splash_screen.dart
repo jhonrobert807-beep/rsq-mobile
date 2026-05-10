@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:resqlink_mobile/routes/app_routes.dart';
+import 'package:provider/provider.dart';
+import '../routes/app_routes.dart';
+import '../providers/auth_provider.dart';
+import '../services/auth_api.dart';
+import '../services/storage_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -9,18 +13,43 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  double alignmentX = 1.1; // X-axis alignment (adjust from -1.0 to 1.0)
-  double alignmentY = 0.4; // Y-axis alignment (adjust from -1.0 to 1.0)
+  double alignmentX = 1.1;
+  double alignmentY = 0.4;
 
   @override
   void initState() {
     super.initState();
-    // Redirect to WelcomeScreen after 2 seconds
-    Future.delayed(const Duration(seconds: 5), () {
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, AppRoutes.welcome);
+    Future.delayed(const Duration(seconds: 2), _checkSession);
+  }
+
+  Future<void> _checkSession() async {
+    if (!mounted) return;
+    final token = await StorageService.getAccessToken();
+    if (token != null) {
+      try {
+        final user = await AuthApi.getProfile();
+        if (!mounted) return;
+        context.read<AuthProvider>().updateUser(user);
+        _navigateByRole(user.role);
+        return;
+      } catch (_) {
+        await StorageService.clearAll();
       }
-    });
+    }
+    if (mounted) Navigator.pushReplacementNamed(context, AppRoutes.welcome);
+  }
+
+  void _navigateByRole(String role) {
+    switch (role) {
+      case 'DRIVER':
+        Navigator.pushReplacementNamed(context, AppRoutes.driverProfileScreen);
+        break;
+      case 'PARAMEDIC':
+        Navigator.pushReplacementNamed(context, AppRoutes.paramedicProfileScreen);
+        break;
+      default:
+        Navigator.pushReplacementNamed(context, AppRoutes.home);
+    }
   }
 
   @override

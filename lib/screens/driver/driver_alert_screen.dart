@@ -1,32 +1,65 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:resqlink_mobile/routes/app_routes.dart';
+import 'package:provider/provider.dart';
+import '../../providers/ride_provider.dart';
+import '../../routes/app_routes.dart';
+import '../../services/ride_api.dart';
 
-class DriverAlertScreen extends StatelessWidget {
+class DriverAlertScreen extends StatefulWidget {
   const DriverAlertScreen({super.key});
 
   @override
+  State<DriverAlertScreen> createState() => _DriverAlertScreenState();
+}
+
+class _DriverAlertScreenState extends State<DriverAlertScreen> {
+  bool _isLoading = false;
+
+  Future<void> _accept() async {
+    final ride = context.read<RideProvider>().activeRide;
+    if (ride == null) return;
+    setState(() => _isLoading = true);
+    try {
+      await RideApi.acceptRide(ride.id);
+      if (mounted) Navigator.pushReplacementNamed(context, AppRoutes.driverRideScreen);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to accept ride. Try again.'), backgroundColor: Colors.red),
+        );
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _reject() async {
+    final ride = context.read<RideProvider>().activeRide;
+    if (ride == null) { Navigator.pop(context); return; }
+    try {
+      await RideApi.rejectRide(ride.id);
+    } catch (_) {}
+    if (mounted) Navigator.pop(context);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Making the status bar transparent to allow the map to bleed through
     SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarIconBrightness: Brightness.light,
-        statusBarColor: Colors.transparent,
-      ),
+      const SystemUiOverlayStyle(statusBarIconBrightness: Brightness.light, statusBarColor: Colors.transparent),
     );
+
+    final ride = context.watch<RideProvider>().activeRide;
+    final pickupLabel = ride != null
+        ? '${ride.pickupLat.toStringAsFixed(4)}, ${ride.pickupLng.toStringAsFixed(4)}'
+        : 'Unknown location';
+    final typeLabel = ride?.ambulanceType == 'WITH_DOCTOR' ? 'With Consultant' : 'Basic Ambulance';
 
     return Scaffold(
       body: Stack(
         children: [
-          // 1. Dark Theme Map Background
           Positioned.fill(
-            child: Image.asset(
-              'assets/images/fare-select.png', // Background map image
-              fit: BoxFit.cover,
-            ),
+            child: Image.asset('assets/images/fare-select.png', fit: BoxFit.cover),
           ),
 
-          // 2. Top Info Card (Pickup and Dropoff)
           Positioned(
             top: 50,
             left: 20,
@@ -36,35 +69,25 @@ class DriverAlertScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4))],
               ),
               child: Column(
                 children: [
-                  _buildRouteRow(Colors.green, "Plot B-5"),
+                  _buildRouteRow(Colors.green, 'Pickup: $pickupLabel'),
                   const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    padding: EdgeInsets.symmetric(vertical: 8),
                     child: Divider(height: 1, thickness: 0.5),
                   ),
-                  _buildRouteRow(Colors.red, "Plot C-9", time: "10 min"),
+                  _buildRouteRow(Colors.blue, typeLabel),
                 ],
               ),
             ),
           ),
 
-          // 3. Centered Alert Modal
           Center(
             child: Container(
               width: MediaQuery.of(context).size.width * 0.75,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-              ),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -72,20 +95,9 @@ class DriverAlertScreen extends StatelessWidget {
                     padding: EdgeInsets.symmetric(vertical: 30, horizontal: 20),
                     child: Column(
                       children: [
-                        Text(
-                          "Alert",
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
+                        Text('Alert', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                         SizedBox(height: 10),
-                        Text(
-                          "Do you want to accept the ride?",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 14, color: Colors.black87),
-                        ),
+                        Text('Do you want to accept the ride?', textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: Colors.black87)),
                       ],
                     ),
                   ),
@@ -93,46 +105,27 @@ class DriverAlertScreen extends StatelessWidget {
                   IntrinsicHeight(
                     child: Row(
                       children: [
-                        // YES Action
                         Expanded(
                           child: InkWell(
-                            onTap: () {
-                              Navigator.pushReplacementNamed(
-                                context,
-                                AppRoutes.driverRideScreen,
-                              );
-                            },
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 15),
+                            onTap: _isLoading ? null : _accept,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 15),
                               child: Center(
-                                child: Text(
-                                  "yes",
-                                  style: TextStyle(
-                                    color: Colors.red,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
+                                child: _isLoading
+                                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.red))
+                                    : const Text('yes', style: TextStyle(color: Colors.red, fontSize: 18, fontWeight: FontWeight.w400)),
                               ),
                             ),
                           ),
                         ),
                         const VerticalDivider(width: 1, thickness: 0.8),
-                        // NO Action
                         Expanded(
                           child: InkWell(
-                            onTap: () => Navigator.pop(context),
+                            onTap: _isLoading ? null : _reject,
                             child: const Padding(
                               padding: EdgeInsets.symmetric(vertical: 15),
                               child: Center(
-                                child: Text(
-                                  "no",
-                                  style: TextStyle(
-                                    color: Colors.red,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
+                                child: Text('no', style: TextStyle(color: Colors.red, fontSize: 18, fontWeight: FontWeight.w400)),
                               ),
                             ),
                           ),
@@ -149,26 +142,12 @@ class DriverAlertScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRouteRow(Color color, String address, {String? time}) {
+  Widget _buildRouteRow(Color color, String label) {
     return Row(
       children: [
         Icon(Icons.circle, color: color, size: 10),
         const SizedBox(width: 12),
-        Text(
-          address,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Colors.black87,
-          ),
-        ),
-        if (time != null) ...[
-          const SizedBox(width: 4),
-          Text(
-            "~$time",
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
-          ),
-        ],
+        Expanded(child: Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black87))),
       ],
     );
   }

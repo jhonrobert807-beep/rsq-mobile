@@ -1,11 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:resqlink_mobile/routes/app_routes.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../models/ride_request_model.dart';
+import '../providers/ride_provider.dart';
+import '../routes/app_routes.dart';
 
-class BookingHistoryScreen extends StatelessWidget {
+class BookingHistoryScreen extends StatefulWidget {
   const BookingHistoryScreen({super.key});
 
   @override
+  State<BookingHistoryScreen> createState() => _BookingHistoryScreenState();
+}
+
+class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<RideProvider>().loadMyRides();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final rideProvider = context.watch<RideProvider>();
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -17,178 +36,141 @@ class BookingHistoryScreen extends StatelessWidget {
         ),
         title: const Text(
           'Booking history',
-          style: TextStyle(
-            fontFamily: 'Roboto',
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
+          style: TextStyle(fontFamily: 'Roboto', color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18),
         ),
         centerTitle: true,
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        children: [
-          const Text(
-            'Ambulance Booking',
-            style: TextStyle(
-              fontFamily: 'Roboto',
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 15),
-          
-          // Using your image assets: ambulance_ven1.png
-          _buildBookingCard(
-            image: 'assets/images/ambulance_ven1.png',
-            name: 'Mr xyz',
-            date: 'Nov 12',
-            time: '10:20 AM',
-            price: 'PKR 250/-',
-            rating: '4.6',
-          ),
-          
-          const SizedBox(height: 15),
-          
-          // Using your image assets: ambulance_ven2.png
-          _buildBookingCard(
-            image: 'assets/images/ambulance_ven2.png',
-            name: 'Mr xyzzz',
-            date: 'Nov 1',
-            time: '12:00 PM',
-            price: 'PKR 500/-',
-            rating: '4.7',
-          ),
-        ],
-      ),
+      body: rideProvider.isLoading
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFFD42C2C)))
+          : rideProvider.myRides.isEmpty
+              ? const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.history, size: 64, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text('No bookings yet', style: TextStyle(fontSize: 16, color: Colors.grey)),
+                    ],
+                  ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  itemCount: rideProvider.myRides.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 15),
+                  itemBuilder: (context, index) {
+                    return _buildRideCard(context, rideProvider.myRides[index]);
+                  },
+                ),
     );
   }
 
-  Widget _buildBookingCard({
-    required String image,
-    required String name,
-    required String date,
-    required String time,
-    required String price,
-    required String rating,
-  }) {
+  Widget _buildRideCard(BuildContext context, RideRequestModel ride) {
+    final isWithDoctor = ride.ambulanceType == 'WITH_DOCTOR';
+    final statusColor = ride.isCompleted
+        ? Colors.green
+        : ride.isCancelled
+            ? Colors.red
+            : Colors.orange;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 2)),
         ],
       ),
-      child: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Row(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                // Ambulance Image
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.asset(
-                    image,
-                    width: 90,
-                    height: 70,
-                    fit: BoxFit.contain,
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF5F5),
+                    borderRadius: BorderRadius.circular(10),
                   ),
+                  child: const Icon(Icons.local_hospital, color: Color(0xFFD42C2C), size: 28),
                 ),
                 const SizedBox(width: 12),
-                // Text Details
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        name,
-                        style: const TextStyle(
-                          fontFamily: 'Roboto',
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        isWithDoctor ? 'Ambulance with Consultant' : 'Basic Ambulance',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, fontFamily: 'Roboto'),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '$date  •  $time',
-                        style: const TextStyle(
-                          fontFamily: 'Roboto',
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            price,
-                            style: const TextStyle(
-                              fontFamily: 'Roboto',
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          // Rebook Button
-                          SizedBox(
-                            height: 32,
-                            child: ElevatedButton.icon(
-                              onPressed: () {},
-                              icon: const Icon(Icons.refresh, size: 14, color: Colors.white),
-                              label: const Text(
-                                'Rebook',
-                                style: TextStyle(
-                                  fontFamily: 'Roboto',
-                                  fontSize: 12,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFC62828),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                              ),
-                            ),
-                          ),
-                        ],
+                        DateFormat('MMM d, y  hh:mm a').format(ride.requestedAt.toLocal()),
+                        style: TextStyle(color: Colors.grey[500], fontSize: 12, fontFamily: 'Roboto'),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
-          // FIXED: Changed 'Position' to 'Positioned'
-          Positioned(
-            top: 12,
-            right: 12,
-            child: Row(
-              children: [
-                const Icon(Icons.star, color: Colors.amber, size: 14),
-                const SizedBox(width: 2),
-                Text(
-                  rating,
-                  style: const TextStyle(
-                    fontFamily: 'Roboto',
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    ride.status.replaceAll('_', ' '),
+                    style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            const Divider(height: 1, color: Color(0xFFF0F0F0)),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  ride.formattedCost,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFFD42C2C)),
+                ),
+                if (ride.userRating != null)
+                  Row(
+                    children: [
+                      const Icon(Icons.star, color: Colors.amber, size: 16),
+                      const SizedBox(width: 4),
+                      Text(ride.userRating!.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                    ],
+                  ),
+                if (ride.ambulanceRegistrationNumber != null)
+                  Text(
+                    ride.ambulanceRegistrationNumber!,
+                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                  ),
+              ],
+            ),
+            if (!ride.isCancelled && !ride.isCompleted)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFFD42C2C)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: () {
+                      context.read<RideProvider>().setActiveRide(ride);
+                      Navigator.pushNamed(context, AppRoutes.userRideDetails);
+                    },
+                    child: const Text('View Details', style: TextStyle(color: Color(0xFFD42C2C))),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:resqlink_mobile/routes/app_routes.dart';
+import '../providers/auth_provider.dart';
 
 class HomeScreen extends StatelessWidget {
   HomeScreen({super.key});
 
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  static final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   // Theme Constants
   static const Color primaryRed = Color(0xFF8D0B0B);
@@ -19,6 +22,8 @@ class HomeScreen extends StatelessWidget {
         statusBarColor: Colors.transparent,
       ),
     );
+
+    context.watch<AuthProvider>();
 
     return Scaffold(
       key: _scaffoldKey,
@@ -79,9 +84,9 @@ class HomeScreen extends StatelessWidget {
                   child: Icon(Icons.person, color: primaryRed, size: 40),
                 ),
                 const SizedBox(height: 15),
-                const Text(
-                  "Welcome User!",
-                  style: TextStyle(
+                Text(
+                  'Welcome ${context.read<AuthProvider>().currentUser?.name ?? 'User'}!',
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 20,
@@ -89,9 +94,9 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  "user@resqlink.com",
+                  context.read<AuthProvider>().currentUser?.displayContact ?? '',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                     fontSize: 14,
                     fontFamily: 'Roboto',
                   ),
@@ -260,8 +265,12 @@ class HomeScreen extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        onPressed: () {
-                          Navigator.pushReplacementNamed(context, AppRoutes.welcome);
+                        onPressed: () async {
+                          Navigator.pop(context);
+                          await context.read<AuthProvider>().logout();
+                          if (context.mounted) {
+                            Navigator.pushReplacementNamed(context, AppRoutes.welcome);
+                          }
                         },
                         child: const Text(
                           "Logout",
@@ -305,11 +314,11 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
         ),
-        const Column(
+        Column(
           children: [
             Text(
-              'Welcome User!',
-              style: TextStyle(
+              'Welcome ${context.read<AuthProvider>().currentUser?.name ?? 'User'}!',
+              style: const TextStyle(
                 fontFamily: 'Roboto',
                 color: Colors.black,
                 fontWeight: FontWeight.bold,
@@ -317,8 +326,8 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
             Text(
-              'Today is December 30, 2025',
-              style: TextStyle(
+              'Today is ${DateFormat('MMMM d, y').format(DateTime.now())}',
+              style: const TextStyle(
                 fontFamily: 'Roboto',
                 color: Color(0xFF9E9E9E),
                 fontSize: 11,

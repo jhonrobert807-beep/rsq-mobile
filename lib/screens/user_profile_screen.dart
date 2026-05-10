@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:resqlink_mobile/routes/app_routes.dart';
+import '../providers/auth_provider.dart';
 
 class UserProfileScreen extends StatelessWidget {
   const UserProfileScreen({super.key});
@@ -130,10 +132,16 @@ class UserProfileScreen extends StatelessWidget {
             ),
 
             const SizedBox(height: 30),
-            const Text('User', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            Text('User@gmail.com | +01 09876 54321', 
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+            Builder(builder: (ctx) {
+              final user = ctx.watch<AuthProvider>().currentUser;
+              return Column(
+                children: [
+                  Text(user?.name ?? 'User', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text(user?.displayContact ?? '', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                ],
+              );
+            }),
 
             const SizedBox(height: 20),
 

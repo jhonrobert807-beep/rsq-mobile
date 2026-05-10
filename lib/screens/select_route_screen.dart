@@ -1,21 +1,74 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:resqlink_mobile/routes/app_routes.dart';
 
-class SelectRouteScreen extends StatelessWidget {
+class SelectRouteScreen extends StatefulWidget {
   const SelectRouteScreen({super.key});
 
-  // Colors from Figma
-  static const Color primaryRed = Color(0xFF8D0B0B);
+  @override
+  State<SelectRouteScreen> createState() => _SelectRouteScreenState();
+}
+
+class _SelectRouteScreenState extends State<SelectRouteScreen> {
   static const Color softPinkBg = Color(0xFFFFF5F5);
+
+  double _pickupLat = 24.8607;
+  double _pickupLng = 67.0011;
+  String _pickupLabel = 'Getting location...';
+
+  @override
+  void initState() {
+    super.initState();
+    _getLocation();
+  }
+
+  Future<void> _getLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() => _pickupLabel = 'Karachi, Pakistan (default)');
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          setState(() => _pickupLabel = 'Karachi, Pakistan (default)');
+          return;
+        }
+      }
+      if (permission == LocationPermission.deniedForever) {
+        setState(() => _pickupLabel = 'Karachi, Pakistan (default)');
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      setState(() {
+        _pickupLat = position.latitude;
+        _pickupLng = position.longitude;
+        _pickupLabel = 'Current Location (${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)})';
+      });
+    } catch (_) {
+      setState(() => _pickupLabel = 'Karachi, Pakistan (default)');
+    }
+  }
+
+  void _goToVehicleSelect() {
+    Navigator.pushNamed(
+      context,
+      AppRoutes.selectVehicle,
+      arguments: {'pickupLat': _pickupLat, 'pickupLng': _pickupLng, 'pickupLabel': _pickupLabel},
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarIconBrightness: Brightness.dark,
-        statusBarColor: Colors.transparent,
-      ),
+      const SystemUiOverlayStyle(statusBarIconBrightness: Brightness.dark, statusBarColor: Colors.transparent),
     );
 
     return Scaffold(
@@ -28,14 +81,7 @@ class SelectRouteScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         centerTitle: true,
-        title: const Text(
-          'Enter your route',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
-        ),
+        title: const Text('Enter your route', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16.0, top: 8, bottom: 8),
@@ -44,13 +90,7 @@ class SelectRouteScreen extends StatelessWidget {
                 color: Colors.white,
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.grey.shade200),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  )
-                ],
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2))],
               ),
               child: IconButton(
                 onPressed: () => Navigator.pop(context),
@@ -68,32 +108,27 @@ class SelectRouteScreen extends StatelessWidget {
             children: [
               const SizedBox(height: 20),
 
-              // From Field (Source)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: softPinkBg,
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                decoration: BoxDecoration(color: softPinkBg, borderRadius: BorderRadius.circular(12)),
                 child: Row(
                   children: [
                     const CircleAvatar(radius: 6, backgroundColor: Colors.green),
                     const SizedBox(width: 12),
-                    Text(
-                      'From',
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: Colors.black.withOpacity(0.7),
-                        fontWeight: FontWeight.w500,
+                    Expanded(
+                      child: Text(
+                        _pickupLabel,
+                        style: TextStyle(fontSize: 15, color: Colors.black.withValues(alpha: 0.7), fontWeight: FontWeight.w500),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 12),
 
-              // To Field (Destination)
               Container(
                 height: 52,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -101,11 +136,11 @@ class SelectRouteScreen extends StatelessWidget {
                   border: Border.all(color: Colors.red.shade400),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Row(
+                child: const Row(
                   children: [
-                    const CircleAvatar(radius: 6, backgroundColor: Colors.red),
-                    const SizedBox(width: 12),
-                    const Expanded(
+                    CircleAvatar(radius: 6, backgroundColor: Colors.red),
+                    SizedBox(width: 12),
+                    Expanded(
                       child: TextField(
                         decoration: InputDecoration(
                           hintText: 'To',
@@ -121,39 +156,32 @@ class SelectRouteScreen extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              // Choose on map link
               InkWell(
-                onTap: () {},
-                child: Row(
+                onTap: _getLocation,
+                child: const Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: const [
+                  children: [
                     Icon(Icons.location_on_outlined, color: Colors.blue, size: 20),
                     SizedBox(width: 8),
-                    Text(
-                      'Choose on map',
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: Colors.blue,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
+                    Text('Use current location', style: TextStyle(fontSize: 15, color: Colors.blue, decoration: TextDecoration.underline)),
                   ],
                 ),
               ),
 
               const SizedBox(height: 25),
 
-              // Search History Results
               Expanded(
                 child: ListView.separated(
                   itemCount: 3,
                   separatorBuilder: (context, index) => Divider(color: Colors.grey.shade200, height: 1),
                   itemBuilder: (context, index) {
+                    final destinations = [
+                      ('Plot B-5', 'Shifa International Hospital, Karachi'),
+                      ('Plot C-9', 'Aga Khan Hospital, Karachi'),
+                      ('Block 7', 'Civil Hospital, Karachi'),
+                    ];
                     return InkWell(
-                      onTap: () {
-                        Navigator.pushNamed(context, AppRoutes.selectVehicle);
-
-                      },
+                      onTap: _goToVehicleSelect,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 16.0),
                         child: Row(
@@ -163,15 +191,9 @@ class SelectRouteScreen extends StatelessWidget {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  'Plot B-5',
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                                ),
+                                Text(destinations[index].$1, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                                 const SizedBox(height: 4),
-                                Text(
-                                  'Shifa International Hospital, Karachi',
-                                  style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
-                                ),
+                                Text(destinations[index].$2, style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
                               ],
                             ),
                           ],
@@ -188,4 +210,3 @@ class SelectRouteScreen extends StatelessWidget {
     );
   }
 }
-

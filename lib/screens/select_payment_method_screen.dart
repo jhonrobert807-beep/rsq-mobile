@@ -1,19 +1,69 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:resqlink_mobile/routes/app_routes.dart'; // For status bar style
+import 'package:provider/provider.dart';
+import 'package:resqlink_mobile/routes/app_routes.dart';
+import '../providers/ride_provider.dart';
 
-class SelectPaymentMethodScreen extends StatelessWidget {
+class SelectPaymentMethodScreen extends StatefulWidget {
   const SelectPaymentMethodScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Set status bar to light (white icons)
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarIconBrightness: Brightness.light,
-        statusBarColor: Colors.white,
-      ),
+  State<SelectPaymentMethodScreen> createState() => _SelectPaymentMethodScreenState();
+}
+
+class _SelectPaymentMethodScreenState extends State<SelectPaymentMethodScreen> {
+  int _selectedPayment = 0;
+  double _pickupLat = 24.8607;
+  double _pickupLng = 67.0011;
+  String _ambulanceType = 'BASIC';
+  bool _initialized = false;
+
+  static const _paymentMethods = [
+    {'label': 'Visa', 'detail': '1024', 'asset': 'assets/images/visa.png', 'method': 'CARD'},
+    {'label': 'MasterCard', 'detail': '4223', 'asset': 'assets/images/mastercard.png', 'method': 'CARD'},
+    {'label': 'Bank Transfer', 'detail': '', 'asset': null, 'method': 'WALLET'},
+    {'label': 'PayPak', 'detail': '', 'asset': 'assets/images/paypak.png', 'method': 'CASH'},
+  ];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      if (args != null) {
+        _pickupLat = (args['pickupLat'] as num?)?.toDouble() ?? 24.8607;
+        _pickupLng = (args['pickupLng'] as num?)?.toDouble() ?? 67.0011;
+        _ambulanceType = args['ambulanceType'] as String? ?? 'BASIC';
+      }
+      _initialized = true;
+    }
+  }
+
+  Future<void> _book() async {
+    final error = await context.read<RideProvider>().createRide(
+      ambulanceType: _ambulanceType,
+      pickupLat: _pickupLat,
+      pickupLng: _pickupLng,
     );
+
+    if (!mounted) return;
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error), backgroundColor: Colors.red[700]),
+      );
+      return;
+    }
+    Navigator.pushReplacementNamed(context, AppRoutes.userRideDetails);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(statusBarIconBrightness: Brightness.light, statusBarColor: Colors.white),
+    );
+
+    final isLoading = context.watch<RideProvider>().isLoading;
+    final priceLabel = _ambulanceType == 'WITH_DOCTOR' ? 'Rs 100/km' : 'Rs 50/km';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -22,16 +72,11 @@ class SelectPaymentMethodScreen extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
         ),
-        title: Text(
+        title: const Text(
           'Select payment method',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-            fontFamily: 'Roboto',
-          ),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black, fontFamily: 'Roboto'),
         ),
         centerTitle: true,
       ),
@@ -42,335 +87,81 @@ class SelectPaymentMethodScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 24),
-
-              // Price at Top-Right (Elegant)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Payment method',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                      fontFamily: 'Roboto',
-                    ),
-                  ),
-                  Text(
-                    'Rs 150/km',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                      fontFamily: 'Roboto',
-                    ),
-                  ),
+                  const Text('Payment method', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black, fontFamily: 'Roboto')),
+                  Text(priceLabel, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black, fontFamily: 'Roboto')),
                 ],
               ),
               const SizedBox(height: 24),
 
-              // State for selected payment
-              ValueListenableBuilder<int>(
-                valueListenable: _selectedPaymentNotifier,
-                builder: (context, selectedIndex, _) {
-                  return Column(
-                    children: [
-                      // Visa Option
-                      GestureDetector(
-                        onTap: () => _selectedPaymentNotifier.value = 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: selectedIndex == 0 ? Colors.blue[50] : Colors.white,
-                            border: Border.all(color: Colors.grey[300]!),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              Image.asset(
-                                'assets/images/visa.png',
-                                width: 32,
-                                height: 24,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Visa',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                        fontFamily: 'Roboto',
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '1024',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey[600],
-                                        fontFamily: 'Roboto',
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // Green Checkmark for Selected Option
-                              if (selectedIndex == 0)
-                                Container(
-                                  width: 20,
-                                  height: 20,
-                                  decoration: BoxDecoration(
-                                    color: Colors.green,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Center(
-                                    child: Icon(Icons.check, color: Colors.white, size: 14),
-                                  ),
-                                )
-                              else
-                                Container(
-                                  width: 20,
-                                  height: 20,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.grey[300]!),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
+              ...List.generate(_paymentMethods.length, (index) {
+                final pm = _paymentMethods[index];
+                final isSelected = _selectedPayment == index;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedPayment = index),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isSelected ? Colors.blue[50] : Colors.white,
+                        border: Border.all(color: Colors.grey[300]!),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      const SizedBox(height: 16),
-
-                      // MasterCard Option
-                      GestureDetector(
-                        onTap: () => _selectedPaymentNotifier.value = 1,
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: selectedIndex == 1 ? Colors.blue[50] : Colors.white,
-                            border: Border.all(color: Colors.grey[300]!),
-                            borderRadius: BorderRadius.circular(12),
+                      child: Row(
+                        children: [
+                          pm['asset'] != null
+                              ? Image.asset(pm['asset']!, width: 32, height: 24)
+                              : Icon(Icons.account_balance, color: Colors.grey[600], size: 24),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(pm['label']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, fontFamily: 'Roboto')),
+                                if (pm['detail']!.isNotEmpty)
+                                  Text(pm['detail']!, style: TextStyle(fontSize: 14, color: Colors.grey[600], fontFamily: 'Roboto')),
+                              ],
+                            ),
                           ),
-                          child: Row(
-                            children: [
-                              Image.asset(
-                                'assets/images/mastercard.png',
-                                width: 32,
-                                height: 24,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'MasterCard',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                        fontFamily: 'Roboto',
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '4223',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey[600],
-                                        fontFamily: 'Roboto',
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // Green Checkmark for Selected Option
-                              if (selectedIndex == 1)
-                                Container(
-                                  width: 20,
-                                  height: 20,
-                                  decoration: BoxDecoration(
-                                    color: Colors.green,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Center(
-                                    child: Icon(Icons.check, color: Colors.white, size: 14),
-                                  ),
-                                )
-                              else
-                                Container(
-                                  width: 20,
-                                  height: 20,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.grey[300]!),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                            ],
+                          Container(
+                            width: 20,
+                            height: 20,
+                            decoration: BoxDecoration(
+                              color: isSelected ? Colors.green : Colors.transparent,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: isSelected ? Colors.green : Colors.grey[300]!),
+                            ),
+                            child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 14) : null,
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Bank Transfer Option
-                      GestureDetector(
-                        onTap: () => _selectedPaymentNotifier.value = 2,
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: selectedIndex == 2 ? Colors.blue[50] : Colors.white,
-                            border: Border.all(color: Colors.grey[300]!),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.account_balance, color: Colors.grey[600], size: 24),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Bank Transfer',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                        fontFamily: 'Roboto',
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // Green Checkmark for Selected Option
-                              if (selectedIndex == 2)
-                                Container(
-                                  width: 20,
-                                  height: 20,
-                                  decoration: BoxDecoration(
-                                    color: Colors.green,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Center(
-                                    child: Icon(Icons.check, color: Colors.white, size: 14),
-                                  ),
-                                )
-                              else
-                                Container(
-                                  width: 20,
-                                  height: 20,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.grey[300]!),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // PayPak Option
-                      GestureDetector(
-                        onTap: () => _selectedPaymentNotifier.value = 3,
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: selectedIndex == 3 ? Colors.blue[50] : Colors.white,
-                            border: Border.all(color: Colors.grey[300]!),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              Image.asset(
-                                'assets/images/paypak.png',
-                                width: 32,
-                                height: 24,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'PayPak',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                        fontFamily: 'Roboto',
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // Green Checkmark for Selected Option
-                              if (selectedIndex == 3)
-                                Container(
-                                  width: 20,
-                                  height: 20,
-                                  decoration: BoxDecoration(
-                                    color: Colors.green,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Center(
-                                    child: Icon(Icons.check, color: Colors.white, size: 14),
-                                  ),
-                                )
-                              else
-                                Container(
-                                  width: 20,
-                                  height: 20,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.grey[300]!),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-
-              const SizedBox(height: 40),
-
-              // Booking Button (Centered + Border Radius 12)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16.0),
-                child: Center( // ✅ Centers the button
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, AppRoutes.userRideDetails);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16), // Add horizontal padding
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12), // ✅ Border radius 12
-                      ),
-                    ),
-                    child: Text(
-                      'Booking',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        fontFamily: 'Roboto',
+                        ],
                       ),
                     ),
                   ),
+                );
+              }),
+
+              const SizedBox(height: 8),
+
+              Center(
+                child: ElevatedButton(
+                  onPressed: isLoading ? null : _book,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: isLoading
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Text('Booking', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'Roboto')),
                 ),
-              ), ],
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 }
-
-// Global state for selected payment method
-final ValueNotifier<int> _selectedPaymentNotifier = ValueNotifier<int>(0);

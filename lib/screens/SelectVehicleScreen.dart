@@ -2,16 +2,47 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:resqlink_mobile/routes/app_routes.dart';
 
-class SelectVehicleScreen extends StatelessWidget {
+class SelectVehicleScreen extends StatefulWidget {
   const SelectVehicleScreen({super.key});
+
+  @override
+  State<SelectVehicleScreen> createState() => _SelectVehicleScreenState();
+}
+
+class _SelectVehicleScreenState extends State<SelectVehicleScreen> {
+  String _selectedType = 'WITH_DOCTOR';
+  double _pickupLat = 24.8607;
+  double _pickupLng = 67.0011;
+  String _pickupLabel = 'Current Location';
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    if (args != null) {
+      _pickupLat = (args['pickupLat'] as num?)?.toDouble() ?? 24.8607;
+      _pickupLng = (args['pickupLng'] as num?)?.toDouble() ?? 67.0011;
+      _pickupLabel = args['pickupLabel'] as String? ?? 'Current Location';
+    }
+  }
+
+  void _goToFareSelection() {
+    Navigator.pushNamed(
+      context,
+      AppRoutes.fareSelection,
+      arguments: {
+        'pickupLat': _pickupLat,
+        'pickupLng': _pickupLng,
+        'pickupLabel': _pickupLabel,
+        'ambulanceType': _selectedType,
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarIconBrightness: Brightness.dark,
-        statusBarColor: Colors.transparent,
-      ),
+      const SystemUiOverlayStyle(statusBarIconBrightness: Brightness.dark, statusBarColor: Colors.transparent),
     );
 
     return Scaffold(
@@ -19,7 +50,6 @@ class SelectVehicleScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // 1. MAP SECTION
             Expanded(
               child: Stack(
                 children: [
@@ -29,8 +59,7 @@ class SelectVehicleScreen extends StatelessWidget {
                     width: double.infinity,
                     height: double.infinity,
                   ),
-                  
-                  // Top Route Info Card
+
                   Positioned(
                     top: 20,
                     left: 20,
@@ -38,7 +67,6 @@ class SelectVehicleScreen extends StatelessWidget {
                     child: _buildRouteInfoCard(),
                   ),
 
-                  // Back Button (Bottom Left of Map)
                   Positioned(
                     bottom: 20,
                     left: 20,
@@ -48,94 +76,74 @@ class SelectVehicleScreen extends StatelessWidget {
               ),
             ),
 
-            // 2. VEHICLE SELECTION BOTTOM SECTION
             Container(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
                 boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 15,
-                    offset: const Offset(0, -5),
-                  ),
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 15, offset: const Offset(0, -5)),
                 ],
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Draggable handle bar
                   Container(
                     width: 40,
                     height: 4,
                     margin: const EdgeInsets.only(bottom: 20),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(10),
+                    decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
+                  ),
+
+                  GestureDetector(
+                    onTap: () => setState(() => _selectedType = 'WITH_DOCTOR'),
+                    child: _buildVehicleTile(
+                      title: 'Ambulance with Consultant',
+                      subtitle: 'PKR 500 base + PKR 100/km',
+                      price: 'PKR 100/km',
+                      isSelected: _selectedType == 'WITH_DOCTOR',
+                      iconPath: 'assets/images/doctor-icon.png',
                     ),
                   ),
 
-                  _buildVehicleTile(
-                    title: 'Ambulance with Consultant',
-                    subtitle: '1 - 3 min',
-                    price: 'PKR 150/km',
-                    isSelected: true,
-                    iconPath: 'assets/images/doctor-icon.png',
-                  ),
-                  
                   const SizedBox(height: 12),
 
-                  _buildVehicleTile(
-                    title: 'Only Ambulance',
-                    subtitle: '4 - 5 min',
-                    price: 'PKR 100/km',
-                    isSelected: false,
-                    iconPath: 'assets/images/ambulance.png',
+                  GestureDetector(
+                    onTap: () => setState(() => _selectedType = 'BASIC'),
+                    child: _buildVehicleTile(
+                      title: 'Only Ambulance',
+                      subtitle: 'PKR 200 base + PKR 50/km',
+                      price: 'PKR 50/km',
+                      isSelected: _selectedType == 'BASIC',
+                      iconPath: 'assets/images/ambulance.png',
+                    ),
                   ),
 
                   const SizedBox(height: 24),
 
-                  // PIXEL PERFECT BOTTOM ROW (Visa + Button + Filter)
                   Row(
                     children: [
-                      // Visa / Payment Section
                       _buildPaymentMethod(),
-
                       const SizedBox(width: 12),
-
-                      // Main Action Button
                       Expanded(
                         child: SizedBox(
                           height: 56,
                           child: ElevatedButton(
-                            onPressed: () {
-                            Navigator.pushNamed(context, AppRoutes.fareSelection);
-                            },
+                            onPressed: _goToFareSelection,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFE53935), // Correct Brand Red
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
+                              backgroundColor: const Color(0xFFE53935),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                               elevation: 0,
                             ),
                             child: const Text(
                               'Select an Ambulance',
                               textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                fontFamily: 'Roboto',
-                              ),
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'Roboto'),
                             ),
                           ),
                         ),
                       ),
-
                       const SizedBox(width: 12),
-
-                      // Filter Icon Button
                       _buildCircleIconButton(Icons.tune, () {}, size: 48, iconSize: 20),
                     ],
                   ),
@@ -166,21 +174,17 @@ class SelectVehicleScreen extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
+          BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
         children: [
-          _buildRouteLine(Colors.green, 'Plot B-5'),
+          _buildRouteLine(Colors.green, _pickupLabel),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 4),
             child: Divider(indent: 12, endIndent: 12, height: 1),
           ),
-          _buildRouteLine(Colors.red, 'Plot C-9 - 10 min'),
+          _buildRouteLine(Colors.red, 'Select destination'),
         ],
       ),
     );
@@ -189,18 +193,14 @@ class SelectVehicleScreen extends StatelessWidget {
   Widget _buildRouteLine(Color color, String text) {
     return Row(
       children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
+        Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
         const SizedBox(width: 12),
-        Text(
-          text,
-          style: const TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: 14,
-            fontFamily: 'Roboto',
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14, fontFamily: 'Roboto'),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
@@ -219,10 +219,7 @@ class SelectVehicleScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: isSelected ? const Color(0xFFFFF5F5) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isSelected ? const Color(0xFFE53935) : Colors.grey[200]!,
-          width: isSelected ? 2 : 1,
-        ),
+        border: Border.all(color: isSelected ? const Color(0xFFE53935) : Colors.grey[200]!, width: isSelected ? 2 : 1),
       ),
       child: Row(
         children: [
@@ -232,21 +229,12 @@ class SelectVehicleScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, fontFamily: 'Roboto'),
-                ),
-                Text(
-                  subtitle,
-                  style: TextStyle(color: Colors.grey[600], fontSize: 13, fontFamily: 'Roboto'),
-                ),
+                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, fontFamily: 'Roboto')),
+                Text(subtitle, style: TextStyle(color: Colors.grey[600], fontSize: 12, fontFamily: 'Roboto')),
               ],
             ),
           ),
-          Text(
-            price,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, fontFamily: 'Roboto'),
-          ),
+          Text(price, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, fontFamily: 'Roboto')),
         ],
       ),
     );
@@ -263,9 +251,7 @@ class SelectVehicleScreen extends StatelessWidget {
           color: Colors.white,
           shape: BoxShape.circle,
           border: Border.all(color: Colors.grey[200]!),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))
-          ],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
         ),
         child: Icon(icon, size: iconSize, color: Colors.black),
       ),

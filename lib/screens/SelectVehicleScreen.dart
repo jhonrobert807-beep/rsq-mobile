@@ -14,15 +14,19 @@ class _SelectVehicleScreenState extends State<SelectVehicleScreen> {
   double _pickupLat = 24.8607;
   double _pickupLng = 67.0011;
   String _pickupLabel = 'Current Location';
+  bool _initialized = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    if (args != null) {
-      _pickupLat = (args['pickupLat'] as num?)?.toDouble() ?? 24.8607;
-      _pickupLng = (args['pickupLng'] as num?)?.toDouble() ?? 67.0011;
-      _pickupLabel = args['pickupLabel'] as String? ?? 'Current Location';
+    if (!_initialized) {
+      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      if (args != null) {
+        _pickupLat = (args['pickupLat'] as num?)?.toDouble() ?? 24.8607;
+        _pickupLng = (args['pickupLng'] as num?)?.toDouble() ?? 67.0011;
+        _pickupLabel = args['pickupLabel'] as String? ?? 'Current Location';
+      }
+      _initialized = true;
     }
   }
 

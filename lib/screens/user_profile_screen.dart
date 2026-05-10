@@ -4,173 +4,148 @@ import 'package:provider/provider.dart';
 import 'package:resqlink_mobile/routes/app_routes.dart';
 import '../providers/auth_provider.dart';
 
-class UserProfileScreen extends StatelessWidget {
+class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({super.key});
 
   @override
+  State<UserProfileScreen> createState() => _UserProfileScreenState();
+}
+
+class _UserProfileScreenState extends State<UserProfileScreen> {
+  @override
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarIconBrightness: Brightness.dark,
-        statusBarColor: Colors.transparent,
-      ),
+      const SystemUiOverlayStyle(statusBarIconBrightness: Brightness.dark, statusBarColor: Colors.transparent),
     );
+
+    final user = context.watch<AuthProvider>().currentUser;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      // Adding the Bottom Navigation Bar here
       bottomNavigationBar: _buildBottomNav(),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Section 1: Curved Header
             Stack(
               alignment: Alignment.center,
               clipBehavior: Clip.none,
               children: [
-            
-              ClipPath(
-                clipper: HeaderClipper(),
-                child: Container(
-                  height: 220,
-                  width: double.infinity,
-                  color: const Color(0xFFEBF0F0),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 50),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                ClipPath(
+                  clipper: _HeaderClipper(),
+                  child: Container(
+                    height: 220,
+                    width: double.infinity,
+                    color: const Color(0xFFEBF0F0),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 50),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.notifications_none_outlined, size: 28),
+                          onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.notificationsSetting),
+                          splashRadius: 24,
+                          padding: EdgeInsets.zero,
+                        ),
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.history, size: 26),
+                              onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.bookingHistoryScreen),
+                              splashRadius: 22,
+                              padding: EdgeInsets.zero,
+                            ),
+                            const SizedBox(width: 15),
+                            IconButton(
+                              icon: const Icon(Icons.more_vert, size: 26),
+                              onPressed: () {},
+                              splashRadius: 22,
+                              padding: EdgeInsets.zero,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                Positioned(
+                  bottom: -15,
+                  child: Stack(
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.notifications_none_outlined, size: 28),
-                        onPressed: () {
-                          Navigator.pushReplacementNamed(context, AppRoutes.notificationsSetting);
-                        },
-                        splashRadius: 24,
-                        tooltip: 'Notifications',
-                        padding: EdgeInsets.zero,
-                        splashColor: Colors.grey.shade300.withOpacity(0.5),
-                        highlightColor: Colors.transparent,
+                      const CircleAvatar(
+                        radius: 58,
+                        backgroundColor: Colors.white,
+                        child: CircleAvatar(
+                          radius: 54,
+                          backgroundImage: AssetImage('assets/images/profile.jpg'),
+                        ),
                       ),
-                      
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.history, size: 26),
-                            onPressed: () {
-                              Navigator.pushReplacementNamed(context, AppRoutes.bookingHistoryScreen);
-                            },
-                            splashRadius: 22,
-                            tooltip: 'Booking History',
-                            padding: EdgeInsets.zero,
-                            splashColor: Colors.grey.shade300.withOpacity(0.5),
-                            highlightColor: Colors.transparent,
+                      Positioned(
+                        bottom: 5,
+                        right: 5,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.grey.shade300),
+                            boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2)],
                           ),
-                          const SizedBox(width: 15),
-                          IconButton(
-                            icon: const Icon(Icons.more_vert, size: 26),
-                            onPressed: () {
-                              // TODO: Show menu (e.g., PopupMenuButton)
-                              print('More options tapped');
-                            },
-                            splashRadius: 22,
-                            tooltip: 'More options',
+                          child: IconButton(
                             padding: EdgeInsets.zero,
-                            splashColor: Colors.grey.shade300.withOpacity(0.5),
-                            highlightColor: Colors.transparent,
+                            constraints: const BoxConstraints(),
+                            splashRadius: 20,
+                            icon: const Icon(Icons.edit_outlined, size: 16, color: Colors.black),
+                            onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.editProfile),
                           ),
-                        ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ),
-                            
-                              
-
-                Positioned(
-                bottom: -15,
-                child: Stack(
-                  children: [
-                    const CircleAvatar(
-                      radius: 58,
-                      backgroundColor: Colors.white,
-                      child: CircleAvatar(
-                        radius: 54,
-                        backgroundImage: AssetImage('assets/images/profile.jpg'), // ✅ Fixed: use AssetImage for local assets
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 5,
-                      right: 5,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.grey.shade300),
-                          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2)],
-                        ),
-                        child: IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          splashRadius: 20,
-                          icon: const Icon(Icons.edit_outlined, size: 16, color: Colors.black),
-                          onPressed: () {
-                            Navigator.pushReplacementNamed(context, AppRoutes.editProfile);
-                          },
-                          tooltip: 'Edit profile picture',
-                          // Optional: Add ripple effect
-                          splashColor: Colors.black12,
-                          highlightColor: Colors.transparent,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
               ],
             ),
 
             const SizedBox(height: 30),
-            Builder(builder: (ctx) {
-              final user = ctx.watch<AuthProvider>().currentUser;
-              return Column(
-                children: [
-                  Text(user?.name ?? 'User', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text(user?.displayContact ?? '', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
-                ],
-              );
-            }),
-
+            Text(user?.name ?? 'User', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Text(user?.displayContact ?? '', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
             const SizedBox(height: 20),
 
-            // Section 2: General Info Card
             _buildProfileCard([
-              _buildListTile(Icons.account_box_outlined, 'Edit profile information'),
+              _buildListTile(Icons.account_box_outlined, 'Edit profile information',
+                  onTap: () => Navigator.pushReplacementNamed(context, AppRoutes.editProfile)),
               const Divider(height: 1),
-              _buildListTile(Icons.notifications_none_outlined, 'Notifications', trailing: 'ON'),
+              _buildListTile(Icons.notifications_none_outlined, 'Notifications', trailing: 'ON',
+                  onTap: () => Navigator.pushReplacementNamed(context, AppRoutes.notificationsSetting)),
               const Divider(height: 1),
-              _buildListTile(Icons.translate, 'Language', trailing: 'English'),
+              _buildListTile(Icons.translate, 'Language', trailing: 'English',
+                  onTap: () => Navigator.pushReplacementNamed(context, AppRoutes.languageSelection)),
             ]),
 
-            // Section 3: Vehicle & Theme Card
             _buildProfileCard([
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 12),
-                child: Text('Vehicle Details', style: TextStyle(color: Colors.black87, fontSize: 14)),
+                child: Text('Account', style: TextStyle(color: Colors.black87, fontSize: 14)),
               ),
               const Divider(height: 1),
               _buildListTile(Icons.face_retouching_natural_outlined, 'Theme', trailing: 'Light mode'),
             ]),
 
-            // Section 4: Support Card
             _buildProfileCard([
               _buildListTile(Icons.people_outline, 'Help & Support'),
               const Divider(height: 1),
               _buildListTile(Icons.chat_bubble_outline, 'Contact us'),
               const Divider(height: 1),
-              _buildListTile(Icons.lock_outline, 'Privacy policy'),
+              _buildListTile(Icons.lock_outline, 'Privacy policy',
+                  onTap: () => Navigator.pushReplacementNamed(context, AppRoutes.privacyPolicy)),
+              const Divider(height: 1),
+              _buildListTile(Icons.logout, 'Logout', isLogout: true, onTap: () async {
+                final navigator = Navigator.of(context);
+                await context.read<AuthProvider>().logout();
+                if (mounted) navigator.pushReplacementNamed(AppRoutes.welcome);
+              }),
             ]),
             const SizedBox(height: 20),
           ],
@@ -179,8 +154,6 @@ class UserProfileScreen extends StatelessWidget {
     );
   }
 
-  // --- UI Component Helpers ---
-
   Widget _buildBottomNav() {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -188,15 +161,13 @@ class UserProfileScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -2))
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -2))],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _navItem(Icons.home, 'Home', true),
-          _navItem(Icons.person, 'Profile', false), // Profile is Active
+          _navItem(Icons.person, 'Profile', false),
         ],
       ),
     );
@@ -228,23 +199,26 @@ class UserProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildListTile(IconData icon, String title, {String? trailing}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.black87, size: 22),
-          const SizedBox(width: 15),
-          Expanded(child: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w400))),
-          if (trailing != null)
-            Text(trailing, style: const TextStyle(color: Color(0xFF2196F3), fontWeight: FontWeight.w600, fontSize: 14)),
-        ],
+  Widget _buildListTile(IconData icon, String title, {String? trailing, bool isLogout = false, VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            Icon(icon, color: isLogout ? Colors.red : Colors.black87, size: 22),
+            const SizedBox(width: 15),
+            Expanded(child: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: isLogout ? Colors.red : Colors.black87))),
+            if (trailing != null)
+              Text(trailing, style: const TextStyle(color: Color(0xFF2196F3), fontWeight: FontWeight.w600, fontSize: 14)),
+          ],
+        ),
       ),
     );
   }
 }
 
-class HeaderClipper extends CustomClipper<Path> {
+class _HeaderClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     Path path = Path();
@@ -254,6 +228,7 @@ class HeaderClipper extends CustomClipper<Path> {
     path.close();
     return path;
   }
+
   @override
   bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

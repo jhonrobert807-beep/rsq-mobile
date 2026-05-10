@@ -78,7 +78,12 @@ class _VehicleProfileEditScreenState extends State<VehicleProfileEditScreen> {
                   width: double.infinity,
                   height: 52,
                   child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Vehicle details are managed by admin'), backgroundColor: Colors.grey),
+                      );
+                      Navigator.pop(context);
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFC62828), // Figma Red
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

@@ -1,12 +1,115 @@
 import 'package:flutter/material.dart';
+import '../services/chat_api.dart';
+import '../models/chat_message_model.dart';
+import '../core/errors/app_exception.dart';
 
-class ChatScreen extends StatelessWidget {
-  const ChatScreen({super.key});
+class ChatScreen extends StatefulWidget {
+  final String rideRequestId;
+  final String recipientId;
+  final String recipientName;
+
+  const ChatScreen({
+    super.key,
+    required this.rideRequestId,
+    required this.recipientId,
+    required this.recipientName,
+  });
+
+  @override
+  State<ChatScreen> createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends State<ChatScreen> {
+  final TextEditingController _messageController = TextEditingController();
+  final List<ChatMessageModel> _messages = [];
+  bool _isLoading = false;
+  bool _isSending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMessages();
+  }
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadMessages() async {
+    setState(() => _isLoading = true);
+    try {
+      final messages = await ChatApi.getRideMessages(widget.rideRequestId);
+      setState(() => _messages.clear());
+      setState(() => _messages.addAll(messages));
+    } on AppException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading messages: ${e.message}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _sendMessage(String message) async {
+    if (message.trim().isEmpty) return;
+
+    _messageController.clear();
+    setState(() => _isSending = true);
+
+    try {
+      final sentMessage = await ChatApi.sendMessage(widget.rideRequestId, message);
+      setState(() => _messages.add(sentMessage));
+    } on AppException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send message: ${e.message}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _ChatScreenUI(
+      recipientName: widget.recipientName,
+      messages: _messages,
+      isLoading: _isLoading,
+      isSending: _isSending,
+      messageController: _messageController,
+      onSendMessage: _sendMessage,
+      onRefresh: _loadMessages,
+    );
+  }
+}
+
+class _ChatScreenUI extends StatelessWidget {
+  final String recipientName;
+  final List<ChatMessageModel> messages;
+  final bool isLoading;
+  final bool isSending;
+  final TextEditingController messageController;
+  final Function(String) onSendMessage;
+  final Future<void> Function() onRefresh;
+
+  const _ChatScreenUI({
+    required this.recipientName,
+    required this.messages,
+    required this.isLoading,
+    required this.isSending,
+    required this.messageController,
+    required this.onSendMessage,
+    required this.onRefresh,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // The background color matches the beige in your image
       backgroundColor: const Color(0xFFEFE7DD),
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -20,14 +123,12 @@ class ChatScreen extends StatelessWidget {
           children: [
             const CircleAvatar(
               radius: 18,
-              backgroundImage: AssetImage(
-                'assets/images/paramedic.jpg',
-              ), // Ensure this asset exists
+              backgroundImage: AssetImage('assets/images/paramedic.jpg'),
             ),
             const SizedBox(width: 10),
-            const Text(
-              "Paramedic",
-              style: TextStyle(
+            Text(
+              recipientName,
+              style: const TextStyle(
                 color: Colors.black,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -49,21 +150,34 @@ class ChatScreen extends StatelessWidget {
       body: Column(
         children: [
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              children: [
-                _buildSystemCard(),
-                _buildMessage("Hello, How can i help you ?", false),
-                _buildMessage(
-                  "I am suffering from headache and cold for 3 days, I took 2 tablets of dolo, but still pain",
-                  true,
-                ),
-                _buildMessage(
-                  "Ok, Do you have fever? Is the headache severe",
-                  false,
-                ),
-              ],
-            ),
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : RefreshIndicator(
+                    onRefresh: onRefresh,
+                    child: messages.isEmpty
+                        ? ListView(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            children: [
+                              _buildSystemCard(),
+                              const SizedBox(height: 20),
+                              Center(
+                                child: Text(
+                                  'No messages yet. Start the conversation!',
+                                  style: TextStyle(color: Colors.grey[600]),
+                                ),
+                              ),
+                            ],
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            itemCount: messages.length + 1,
+                            itemBuilder: (context, index) {
+                              if (index == 0) return _buildSystemCard();
+                              final message = messages[index - 1];
+                              return _buildMessage(message.message, message.messageType == 'SENT');
+                            },
+                          ),
+                  ),
           ),
           _buildInputBar(),
         ],
@@ -161,11 +275,13 @@ class ChatScreen extends StatelessWidget {
                 children: [
                   const SizedBox(width: 12),
                   const Icon(Icons.emoji_emotions_outlined, color: Colors.grey),
-                  const Expanded(
+                  Expanded(
                     child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
                       child: TextField(
-                        decoration: InputDecoration(
+                        controller: messageController,
+                        onSubmitted: (_) => isSending ? null : onSendMessage(messageController.text),
+                        decoration: const InputDecoration(
                           hintText: "Type message",
                           hintStyle: TextStyle(
                             color: Colors.grey,
@@ -185,10 +301,19 @@ class ChatScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          const CircleAvatar(
+          CircleAvatar(
             radius: 25,
-            backgroundColor: Color(0xFF008B8B),
-            child: Icon(Icons.mic, color: Colors.white),
+            backgroundColor: const Color(0xFF008B8B),
+            child: IconButton(
+              icon: isSending
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                    )
+                  : const Icon(Icons.send, color: Colors.white),
+              onPressed: isSending ? null : () => onSendMessage(messageController.text),
+            ),
           ),
         ],
       ),

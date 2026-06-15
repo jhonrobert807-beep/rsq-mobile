@@ -5,10 +5,15 @@ import 'package:provider/provider.dart';
 import 'package:resqlink_mobile/routes/app_routes.dart';
 import '../providers/auth_provider.dart';
 
-class HomeScreen extends StatelessWidget {
-  HomeScreen({super.key});
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
-  static final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  late final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   // Theme Constants
   static const Color primaryRed = Color(0xFF8D0B0B);
@@ -35,7 +40,7 @@ class HomeScreen extends StatelessWidget {
         automaticallyImplyLeading: false,
         title: _buildAppBarContent(context),
       ),
-      bottomNavigationBar: _buildBottomNav(),
+      bottomNavigationBar: _buildBottomNav(context),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
@@ -443,7 +448,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBottomNav() {
+  Widget _buildBottomNav(BuildContext context) {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       height: 70,
@@ -462,7 +467,10 @@ class HomeScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _navItem(Icons.home, 'Home', true),
-          _navItem(Icons.person, 'Profile', false),
+          GestureDetector(
+            onTap: () => Navigator.pushReplacementNamed(context, AppRoutes.userProfile),
+            child: _navItem(Icons.person, 'Profile', false),
+          ),
         ],
       ),
     );

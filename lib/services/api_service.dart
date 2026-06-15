@@ -96,9 +96,27 @@ class ApiService {
   }
 
   static AppException _handleError(DioException e) {
-    final message = e.response?.data?['message'] ?? e.message ?? 'Something went wrong';
+    String message = 'Something went wrong';
+
+    if (e.response != null) {
+      // Server responded with error
+      final data = e.response?.data;
+      if (data is Map) {
+        message = data['message'] ?? data['error'] ?? 'Server error';
+      } else if (data is String) {
+        message = data;
+      }
+      message = '$message (${e.response?.statusCode})';
+    } else if (e.message != null) {
+      // Network error
+      message = e.message!;
+      if (message.contains('CORS') || message.contains('XMLHttpRequest')) {
+        message = 'Network error: CORS or backend connection issue. Check console for details.';
+      }
+    }
+
     return AppException(
-      message is List ? message.first : message.toString(),
+      message.toString(),
       statusCode: e.response?.statusCode,
     );
   }

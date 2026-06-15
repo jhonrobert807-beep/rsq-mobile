@@ -45,8 +45,14 @@ class RideProvider extends ChangeNotifier {
     _setLoading(true);
     try {
       _myRides = await RideApi.getMyRides();
+      _error = null;
       notifyListeners();
-    } catch (_) {
+    } on AppException catch (e) {
+      _error = e.message;
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to load rides: ${e.toString()}';
+      notifyListeners();
     } finally {
       _setLoading(false);
     }

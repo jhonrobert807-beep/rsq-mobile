@@ -1,15 +1,6 @@
-import 'dart:io';
-
 class ApiConstants {
-  static String get baseUrl {
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001/api';
-    return 'http://localhost:3001/api';
-  }
-
-  static String get socketUrl {
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
-  }
+  static const String baseUrl = 'https://resqlinkbackend-production.up.railway.app/api';
+  static const String socketUrl = 'https://resqlinkbackend-production.up.railway.app';
 
   // Auth
   static const String login = '/auth/login';

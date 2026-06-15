@@ -19,7 +19,7 @@ class UserProfileScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       // Adding the Bottom Navigation Bar here
-      bottomNavigationBar: _buildBottomNav(),
+      bottomNavigationBar: _buildBottomNav(context),
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -181,7 +181,7 @@ class UserProfileScreen extends StatelessWidget {
 
   // --- UI Component Helpers ---
 
-  Widget _buildBottomNav() {
+  Widget _buildBottomNav(BuildContext context) {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       height: 70,
@@ -195,8 +195,11 @@ class UserProfileScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _navItem(Icons.home, 'Home', true),
-          _navItem(Icons.person, 'Profile', false), // Profile is Active
+          GestureDetector(
+            onTap: () => Navigator.pushReplacementNamed(context, AppRoutes.home),
+            child: _navItem(Icons.home, 'Home', false),
+          ),
+          _navItem(Icons.person, 'Profile', true),
         ],
       ),
     );

@@ -56,4 +56,29 @@ class RideApi {
         'paymentStatus': paymentStatus,
         if (paymentMethod != null) 'paymentMethod': paymentMethod,
       });
+
+  static Future<RideRequestModel> createAdminRide({
+    required String userId,
+    required String ambulanceType,
+    required double pickupLat,
+    required double pickupLng,
+    double? destinationLat,
+    double? destinationLng,
+    String? notes,
+  }) async {
+    final data = <String, dynamic>{
+      'userId': userId,
+      'ambulanceType': ambulanceType,
+      'pickupLat': pickupLat,
+      'pickupLng': pickupLng,
+    };
+    if (destinationLat != null) data['destinationLat'] = destinationLat;
+    if (destinationLng != null) data['destinationLng'] = destinationLng;
+    if (notes != null) data['notes'] = notes;
+    final result = await ApiService.post('${ApiConstants.rideRequests}/admin', data: data);
+    return RideRequestModel.fromJson(result);
+  }
+
+  static Future<void> reassignRide(String rideId, String driverId) =>
+      ApiService.patch('${ApiConstants.rideRequests}/$rideId/reassign', data: {'driverId': driverId});
 }

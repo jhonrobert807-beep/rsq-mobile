@@ -41,6 +41,19 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
   }
 
   void _handleOtpInput(int index, String value) {
+    // If pasted value has multiple digits, distribute them
+    if (value.length > 1) {
+      for (int i = 0; i < value.length && index + i < 5; i++) {
+        _otpControllers[index + i].text = value[i];
+      }
+      // Move focus to next empty field or last field
+      if (index + value.length < 5) {
+        _otpFocusNodes[index + value.length].requestFocus();
+      }
+      return;
+    }
+
+    // Single digit input
     if (value.isNotEmpty && index < 4) {
       _otpFocusNodes[index + 1].requestFocus();
     } else if (value.isEmpty && index > 0) {
@@ -53,10 +66,10 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
   void _navigateByRole(String role) {
     switch (role) {
       case 'DRIVER':
-        Navigator.pushReplacementNamed(context, AppRoutes.driverProfileScreen);
+        Navigator.pushReplacementNamed(context, AppRoutes.driverHomeScreen);
         break;
       case 'PARAMEDIC':
-        Navigator.pushReplacementNamed(context, AppRoutes.paramedicProfileScreen);
+        Navigator.pushReplacementNamed(context, AppRoutes.paramedicHomeScreen);
         break;
       default:
         Navigator.pushReplacementNamed(context, AppRoutes.home);

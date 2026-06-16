@@ -3,6 +3,7 @@ import 'package:resqlink_mobile/screens/SelectVehicleScreen.dart';
 import 'package:resqlink_mobile/screens/booking_history_screen.dart';
 import 'package:resqlink_mobile/screens/chat_screen.dart';
 import 'package:resqlink_mobile/screens/driver/driver_alert_screen.dart';
+import 'package:resqlink_mobile/screens/driver/driver_home_screen.dart';
 import 'package:resqlink_mobile/screens/driver/driver_profile_screen.dart';
 import 'package:resqlink_mobile/screens/driver/driver_ride_screen.dart';
 import 'package:resqlink_mobile/screens/driver/edit_driver_profile_screen.dart';
@@ -15,6 +16,7 @@ import 'package:resqlink_mobile/screens/notifications_screen.dart';
 import 'package:resqlink_mobile/screens/paramedic/edit_para_profile_screen.dart';
 import 'package:resqlink_mobile/screens/paramedic/paramedi_notifications_screen.dart';
 import 'package:resqlink_mobile/screens/paramedic/paramedic_alert_screen.dart';
+import 'package:resqlink_mobile/screens/paramedic/paramedic_home_screen.dart';
 import 'package:resqlink_mobile/screens/paramedic/paramedic_profile_screen.dart';
 import 'package:resqlink_mobile/screens/payment/add_card_screen.dart';
 import 'package:resqlink_mobile/screens/payment/card_flow_screen.dart';
@@ -61,11 +63,13 @@ class AppRoutes {
 
   static const String editProfileDriver = '/edit_profile_driver';
   static const String driverAlertScreen = '/driver_alert_screen';
+  static const String driverHomeScreen = '/driver_home_screen';
   static const String driverProfileScreen = '/driver_profile_screen';
   static const String driverRideScreen = '/driver_ride_screen';
 
   static const String editParamedicProfileScreen = '/edit_paramedic_profile';
   static const String paramedicAlertScreen = '/paramedic_alert_screen';
+  static const String paramedicHomeScreen = '/paramedic_home_screen';
   static const String paramedicProfileScreen = '/paramedic_profile_screen';
 
   static Map<String, WidgetBuilder> get routes {
@@ -89,7 +93,14 @@ class AppRoutes {
       bookingHistoryScreen: (context) => const BookingHistoryScreen(),
       addCardScreen: (context) => const AddCardScreen(),
       cardFlowScreen: (context) => const CardFlowScreen(),
-      chatScreen: (context) => const ChatScreen(),
+      chatScreen: (context) {
+        final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+        return ChatScreen(
+          rideRequestId: args?['rideRequestId'] ?? 'default',
+          recipientId: args?['recipientId'] ?? 'unknown',
+          recipientName: args?['recipientName'] ?? 'User',
+        );
+      },
       login: (context) => const LoginScreen(),
       signup: (context) => const SignupScreen(),
       sendVerification: (context) => const SendVerificationScreen(),
@@ -98,12 +109,14 @@ class AppRoutes {
 
       editProfileDriver: (context) => const EditDriverProfileScreen(),
       driverAlertScreen: (context) => const DriverAlertScreen(),
+      driverHomeScreen: (context) => const DriverHomeScreen(),
       driverProfileScreen: (context) => const DriverProfileScreen(),
       driverRideScreen: (context) => const DriverRideScreen(),
 
       editParamedicProfileScreen: (context) =>
           const EditParamedicProfileScreen(),
       paramedicAlertScreen: (context) => const ParamedicAlertScreen(),
+      paramedicHomeScreen: (context) => const ParamedicHomeScreen(),
       paramedicProfileScreen: (context) => const ParamedicProfileScreen(),
     };
   }

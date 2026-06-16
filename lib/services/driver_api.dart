@@ -55,12 +55,22 @@ class DriverApi {
     String? licenseNumber,
     String? vehicleType,
     String? licenseExpiry,
+    String? vehicleOwner,
+    String? vehicleRegistrationNumber,
+    String? vehicleCity,
+    String? gender,
+    String? country,
   }) async {
     try {
       final data = <String, dynamic>{};
       if (licenseNumber != null) data['licenseNumber'] = licenseNumber;
       if (vehicleType != null) data['vehicleType'] = vehicleType;
       if (licenseExpiry != null) data['licenseExpiry'] = licenseExpiry;
+      if (vehicleOwner != null) data['vehicleOwner'] = vehicleOwner;
+      if (vehicleRegistrationNumber != null) data['vehicleRegistrationNumber'] = vehicleRegistrationNumber;
+      if (vehicleCity != null) data['vehicleCity'] = vehicleCity;
+      if (gender != null) data['gender'] = gender;
+      if (country != null) data['country'] = country;
       final result = await ApiService.patch('${ApiConstants.driverProfiles}/$id', data: data);
       return DriverProfileModel.fromJson(result);
     } catch (e) {

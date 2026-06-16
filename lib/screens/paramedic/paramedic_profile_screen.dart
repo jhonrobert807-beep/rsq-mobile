@@ -73,32 +73,34 @@ class _ParamedicProfileScreenState extends State<ParamedicProfileScreen> {
 
     final user = context.watch<AuthProvider>().currentUser;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      bottomNavigationBar: _buildBottomNav(),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            Stack(
-              alignment: Alignment.center,
-              clipBehavior: Clip.none,
-              children: [
-                ClipPath(
-                  clipper: _HeaderClipper(),
-                  child: Container(
-                    height: 220,
-                    width: double.infinity,
-                    color: const Color(0xFFEBF0F0),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 50),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.arrow_back, size: 28, color: Colors.black),
-                              onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.welcome),
+    return WillPopScope(
+      onWillPop: () async => false,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8F9FA),
+        bottomNavigationBar: _buildBottomNav(),
+        body: SingleChildScrollView(
+          child: Column(
+            children: [
+              Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: [
+                  ClipPath(
+                    clipper: _HeaderClipper(),
+                    child: Container(
+                      height: 220,
+                      width: double.infinity,
+                      color: const Color(0xFFEBF0F0),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 50),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.arrow_back, size: 28, color: Colors.black),
+                                onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.paramedicHomeScreen),
                               splashRadius: 24,
                               padding: EdgeInsets.zero,
                             ),
@@ -184,8 +186,13 @@ class _ParamedicProfileScreenState extends State<ParamedicProfileScreen> {
 
             const SizedBox(height: 30),
             Text(
-              user?.name ?? 'Paramedic',
+              user?.name ?? 'Paramedic Staff',
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Paramedic Staff',
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
             ),
             const SizedBox(height: 4),
             Text(
@@ -236,6 +243,7 @@ class _ParamedicProfileScreenState extends State<ParamedicProfileScreen> {
             const SizedBox(height: 20),
           ],
         ),
+      ),
       ),
     );
   }

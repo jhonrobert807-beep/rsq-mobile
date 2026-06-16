@@ -34,10 +34,10 @@ class _LoginScreenState extends State<LoginScreen> {
   void _navigateByRole(String role) {
     switch (role) {
       case 'DRIVER':
-        Navigator.pushReplacementNamed(context, AppRoutes.driverProfileScreen);
+        Navigator.pushReplacementNamed(context, AppRoutes.driverHomeScreen);
         break;
       case 'PARAMEDIC':
-        Navigator.pushReplacementNamed(context, AppRoutes.paramedicProfileScreen);
+        Navigator.pushReplacementNamed(context, AppRoutes.paramedicHomeScreen);
         break;
       default:
         Navigator.pushReplacementNamed(context, AppRoutes.home);

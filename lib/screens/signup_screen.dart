@@ -36,19 +36,6 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  void _navigateByRole(String role) {
-    switch (role) {
-      case 'DRIVER':
-        Navigator.pushReplacementNamed(context, AppRoutes.driverProfileScreen);
-        break;
-      case 'PARAMEDIC':
-        Navigator.pushReplacementNamed(context, AppRoutes.paramedicProfileScreen);
-        break;
-      default:
-        Navigator.pushReplacementNamed(context, AppRoutes.home);
-    }
-  }
-
   Future<void> _signup() async {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
@@ -87,8 +74,14 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
-    final role = context.read<AuthProvider>().currentUser?.role ?? 'USER';
-    _navigateByRole(role);
+    // After signup, redirect to OTP verification with email/phone
+    final identifier = email.isNotEmpty ? email : phone;
+    if (!mounted) return;
+    Navigator.pushReplacementNamed(
+      context,
+      AppRoutes.verifyOtp,
+      arguments: {'identifier': identifier, 'isSignup': true},
+    );
   }
 
   void _showError(String message) {

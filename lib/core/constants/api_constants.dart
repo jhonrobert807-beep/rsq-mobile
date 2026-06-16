@@ -1,6 +1,6 @@
 class ApiConstants {
-  static const String baseUrl = 'https://resqlinkbackend-production.up.railway.app/api';
-  static const String socketUrl = 'https://resqlinkbackend-production.up.railway.app';
+  static const String baseUrl = 'http://localhost:3001/api';
+  static const String socketUrl = 'http://localhost:3001';
 
   // Auth
   static const String login = '/auth/login';

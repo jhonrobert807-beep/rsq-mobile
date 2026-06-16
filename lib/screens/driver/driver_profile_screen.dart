@@ -20,6 +20,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
   DriverProfileModel? _driverProfile;
   Timer? _pollTimer;
   bool _hasAlert = false;
+  int _selectedTab = 0;
 
   @override
   void initState() {
@@ -73,11 +74,13 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
 
     final user = context.watch<AuthProvider>().currentUser;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      bottomNavigationBar: _buildBottomNav(),
-      body: SingleChildScrollView(
-        child: Column(
+    return WillPopScope(
+      onWillPop: () async => false,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8F9FA),
+        bottomNavigationBar: _buildBottomNav(),
+        body: SingleChildScrollView(
+          child: Column(
           children: [
             Stack(
               alignment: Alignment.center,
@@ -98,7 +101,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
                           children: [
                             IconButton(
                               icon: const Icon(Icons.arrow_back, size: 28, color: Colors.black),
-                              onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.welcome),
+                              onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.driverHomeScreen),
                               splashRadius: 24,
                               padding: EdgeInsets.zero,
                             ),
@@ -189,6 +192,11 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
             ),
             const SizedBox(height: 4),
             Text(
+              'Driver',
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+            ),
+            const SizedBox(height: 4),
+            Text(
               user?.displayContact ?? '',
               style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
             ),
@@ -237,6 +245,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -252,8 +261,14 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _navItem(Icons.home, 'Home', true),
-          _navItem(Icons.person, 'Profile', false),
+          GestureDetector(
+            onTap: () => setState(() => _selectedTab = 0),
+            child: _navItem(Icons.home, 'Home', _selectedTab == 0),
+          ),
+          GestureDetector(
+            onTap: () => setState(() => _selectedTab = 1),
+            child: _navItem(Icons.person, 'Profile', _selectedTab == 1),
+          ),
         ],
       ),
     );

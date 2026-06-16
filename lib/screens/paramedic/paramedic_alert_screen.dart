@@ -21,7 +21,17 @@ class _ParamedicAlertScreenState extends State<ParamedicAlertScreen> {
     setState(() => _isLoading = true);
     try {
       await RideApi.acceptRide(ride.id);
-      if (mounted) Navigator.pushReplacementNamed(context, AppRoutes.chatScreen);
+      if (mounted) {
+        Navigator.pushReplacementNamed(
+          context,
+          AppRoutes.chatScreen,
+          arguments: {
+            'rideRequestId': ride.id,
+            'recipientId': ride.userId,
+            'recipientName': 'Patient',
+          },
+        );
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

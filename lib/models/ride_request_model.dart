@@ -8,6 +8,8 @@ class RideRequestModel {
   final double? destinationLng;
   final String status;
   final String? assignedDriverId;
+  final String? driverName;
+  final String? driverPhone;
   final String? ambulanceId;
   final String? ambulanceRegistrationNumber;
   final double? cost;
@@ -30,6 +32,8 @@ class RideRequestModel {
     this.destinationLng,
     required this.status,
     this.assignedDriverId,
+    this.driverName,
+    this.driverPhone,
     this.ambulanceId,
     this.ambulanceRegistrationNumber,
     this.cost,
@@ -53,6 +57,8 @@ class RideRequestModel {
         destinationLng: (json['destinationLng'] as num?)?.toDouble(),
         status: json['status'],
         assignedDriverId: json['assignedDriverId'],
+        driverName: json['assignedDriver']?['name'],
+        driverPhone: json['assignedDriver']?['phone'],
         ambulanceId: json['ambulanceId'],
         ambulanceRegistrationNumber: json['ambulance']?['registrationNumber'],
         cost: (json['cost'] as num?)?.toDouble(),

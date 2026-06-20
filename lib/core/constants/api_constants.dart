@@ -9,6 +9,7 @@ class ApiConstants {
   static const String profile = '/auth/profile';
   static const String sendOtp = '/auth/send-otp';
   static const String verifyOtp = '/auth/verify-otp';
+  static const String googleLogin = '/auth/google-login';
 
   // Users
   static const String users = '/users';

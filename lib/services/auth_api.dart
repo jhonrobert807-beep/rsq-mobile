@@ -36,4 +36,13 @@ class AuthApi {
     final result = await ApiService.post(ApiConstants.verifyOtp, data: {'identifier': identifier, 'code': code});
     return result['verified'] == true;
   }
+
+  static Future<Map<String, dynamic>> googleLogin({
+    required String idToken,
+    String? role,
+  }) async {
+    final data = <String, dynamic>{'idToken': idToken};
+    if (role != null && role.isNotEmpty) data['role'] = role;
+    return await ApiService.post(ApiConstants.googleLogin, data: data);
+  }
 }

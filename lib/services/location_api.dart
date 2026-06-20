@@ -5,19 +5,19 @@ class LocationApi {
   /// Search for locations by query (hospitals, landmarks, addresses)
   static Future<List<Map<String, dynamic>>> searchLocations({
     required String query,
-    required double latitude,
-    required double longitude,
-    double radiusKm = 50,
+    double? latitude,
+    double? longitude,
   }) async {
     try {
+      final params = <String, dynamic>{
+        'q': query,
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
+      };
+
       final result = await ApiService.get(
         '/locations/search',
-        params: {
-          'query': query,
-          'latitude': latitude,
-          'longitude': longitude,
-          'radiusKm': radiusKm,
-        },
+        params: params,
       );
       return (result as List).map((e) => e as Map<String, dynamic>).toList();
     } catch (e) {

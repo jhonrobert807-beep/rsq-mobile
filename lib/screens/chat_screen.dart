@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../services/chat_api.dart';
+import '../services/socket_service.dart';
 import '../models/chat_message_model.dart';
 import '../core/errors/app_exception.dart';
+import '../providers/auth_provider.dart';
 
 class ChatScreen extends StatefulWidget {
   final String rideRequestId;
@@ -24,16 +27,49 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<ChatMessageModel> _messages = [];
   bool _isLoading = false;
   bool _isSending = false;
+  bool _isSocketConnected = false;
 
   @override
   void initState() {
     super.initState();
-    _loadMessages();
+    _initializeChat();
+  }
+
+  Future<void> _initializeChat() async {
+    // Load message history from REST API
+    await _loadMessages();
+
+    // Connect to WebSocket for real-time messages
+    await _connectWebSocket();
+  }
+
+  Future<void> _connectWebSocket() async {
+    try {
+      await SocketService.connectChat();
+      SocketService.joinRideChat(widget.rideRequestId);
+
+      // Listen for incoming messages
+      SocketService.onNewMessage((data) {
+        if (mounted) {
+          final message = ChatMessageModel.fromJson(data);
+          setState(() => _messages.add(message));
+        }
+      });
+
+      setState(() => _isSocketConnected = true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('WebSocket connection failed, using fallback'), backgroundColor: Colors.orange),
+        );
+      }
+    }
   }
 
   @override
   void dispose() {
     _messageController.dispose();
+    SocketService.disconnectChat();
     super.dispose();
   }
 
@@ -41,8 +77,12 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() => _isLoading = true);
     try {
       final messages = await ChatApi.getRideMessages(widget.rideRequestId);
-      setState(() => _messages.clear());
-      setState(() => _messages.addAll(messages));
+      if (mounted) {
+        setState(() {
+          _messages.clear();
+          _messages.addAll(messages);
+        });
+      }
     } on AppException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -61,12 +101,38 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() => _isSending = true);
 
     try {
-      final sentMessage = await ChatApi.sendMessage(widget.rideRequestId, message);
-      setState(() => _messages.add(sentMessage));
-    } on AppException catch (e) {
+      final userId = context.read<AuthProvider>().currentUser?.id;
+      if (userId == null) throw Exception('User not authenticated');
+
+      if (_isSocketConnected) {
+        // Send via WebSocket (instant) - DON'T send senderId, backend extracts from JWT
+        SocketService.sendChatMessage({
+          'receiverId': widget.recipientId,
+          'rideRequestId': widget.rideRequestId,
+          'message': message,
+          'messageType': 'TEXT',
+        });
+
+        // Optimistic update: add message to UI immediately
+        final optimisticMessage = ChatMessageModel(
+          id: 'temp-${DateTime.now().millisecondsSinceEpoch}',
+          rideRequestId: widget.rideRequestId,
+          senderId: userId,
+          receiverId: widget.recipientId,
+          message: message,
+          messageType: 'TEXT',
+          sentAt: DateTime.now(),
+        );
+        setState(() => _messages.add(optimisticMessage));
+      } else {
+        // Fallback to REST if WebSocket unavailable
+        final sentMessage = await ChatApi.sendMessage(widget.rideRequestId, message);
+        setState(() => _messages.add(sentMessage));
+      }
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send message: ${e.message}')),
+          SnackBar(content: Text('Failed to send message: $e')),
         );
       }
     } finally {

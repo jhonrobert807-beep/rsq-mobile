@@ -61,6 +61,21 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<String?> googleLogin({required String idToken, String? role}) async {
+    _setLoading(true);
+    try {
+      final result = await AuthApi.googleLogin(idToken: idToken, role: role);
+      await _saveSession(result);
+      return null;
+    } on AppException catch (e) {
+      _error = e.message;
+      notifyListeners();
+      return e.message;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   Future<void> logout() async {
     await StorageService.clearAll();
     _currentUser = null;

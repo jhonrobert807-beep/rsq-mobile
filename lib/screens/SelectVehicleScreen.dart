@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:resqlink_mobile/routes/app_routes.dart';
+import '../providers/ride_provider.dart';
 
 class SelectVehicleScreen extends StatefulWidget {
   const SelectVehicleScreen({super.key});
@@ -11,9 +13,13 @@ class SelectVehicleScreen extends StatefulWidget {
 
 class _SelectVehicleScreenState extends State<SelectVehicleScreen> {
   String _selectedType = 'WITH_DOCTOR';
+  String? _selectedPayment = 'CASH';
   double _pickupLat = 24.8607;
   double _pickupLng = 67.0011;
   String _pickupLabel = 'Current Location';
+  double? _destinationLat;
+  double? _destinationLng;
+  String? _destinationName;
   bool _initialized = false;
 
   @override
@@ -25,12 +31,61 @@ class _SelectVehicleScreenState extends State<SelectVehicleScreen> {
         _pickupLat = (args['pickupLat'] as num?)?.toDouble() ?? 24.8607;
         _pickupLng = (args['pickupLng'] as num?)?.toDouble() ?? 67.0011;
         _pickupLabel = args['pickupLabel'] as String? ?? 'Current Location';
+        _destinationLat = (args['destinationLat'] as num?)?.toDouble();
+        _destinationLng = (args['destinationLng'] as num?)?.toDouble();
+        _destinationName = args['destinationName'] as String?;
       }
+
       _initialized = true;
     }
   }
 
   void _goToFareSelection() {
+    final rideProvider = context.read<RideProvider>();
+
+    // Validate all required fields
+    final hasDestination = rideProvider.selectedDestination != null || _destinationName != null;
+    if (!hasDestination) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a destination first'),
+          backgroundColor: Color(0xFFE53935),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    if (_selectedType.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select an ambulance type'),
+          backgroundColor: Color(0xFFE53935),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    if (_selectedPayment == null || _selectedPayment!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a payment method'),
+          backgroundColor: Color(0xFFE53935),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    // Update provider with selections
+    rideProvider.setVehicleType(_selectedType);
+    rideProvider.setPaymentMethod(_selectedPayment ?? 'CASH');
+
+    // Get destination from either provider or arguments
+    final destLat = rideProvider.selectedDestination?.latitude ?? _destinationLat ?? 0.0;
+    final destLng = rideProvider.selectedDestination?.longitude ?? _destinationLng ?? 0.0;
+
     Navigator.pushNamed(
       context,
       AppRoutes.fareSelection,
@@ -38,9 +93,22 @@ class _SelectVehicleScreenState extends State<SelectVehicleScreen> {
         'pickupLat': _pickupLat,
         'pickupLng': _pickupLng,
         'pickupLabel': _pickupLabel,
+        'destinationLat': destLat,
+        'destinationLng': destLng,
+        'destinationName': rideProvider.selectedDestination?.name ?? _destinationName,
         'ambulanceType': _selectedType,
+        'paymentMethod': _selectedPayment,
       },
     );
+  }
+
+  bool _isButtonEnabled() {
+    final rideProvider = context.read<RideProvider>();
+    final hasDestination = rideProvider.selectedDestination != null || _destinationName != null;
+    return hasDestination &&
+        _selectedType.isNotEmpty &&
+        _selectedPayment != null &&
+        _selectedPayment!.isNotEmpty;
   }
 
   @override
@@ -125,31 +193,54 @@ class _SelectVehicleScreenState extends State<SelectVehicleScreen> {
 
                   const SizedBox(height: 24),
 
-                  Row(
-                    children: [
-                      _buildPaymentMethod(),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: SizedBox(
-                          height: 56,
-                          child: ElevatedButton(
-                            onPressed: _goToFareSelection,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFE53935),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                              elevation: 0,
-                            ),
-                            child: const Text(
-                              'Select an Ambulance',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'Roboto'),
-                            ),
+                  Consumer<RideProvider>(
+                    builder: (context, rideProvider, _) {
+                      final isEnabled = _isButtonEnabled();
+                      final missingField = rideProvider.selectedDestination == null
+                          ? 'Select destination'
+                          : _selectedPayment == null || _selectedPayment!.isEmpty
+                              ? 'Select payment'
+                              : null;
+
+                      return Column(
+                        children: [
+                          Row(
+                            children: [
+                              _buildPaymentMethod(),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: SizedBox(
+                                  height: 56,
+                                  child: ElevatedButton(
+                                    onPressed: isEnabled ? _goToFareSelection : null,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: isEnabled ? const Color(0xFFE53935) : Colors.grey[400],
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                      elevation: 0,
+                                    ),
+                                    child: const Text(
+                                      'Confirm Booking',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'Roboto'),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              _buildCircleIconButton(Icons.tune, () {}, size: 48, iconSize: 20),
+                            ],
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      _buildCircleIconButton(Icons.tune, () {}, size: 48, iconSize: 20),
-                    ],
+                          if (missingField != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 12),
+                              child: Text(
+                                missingField,
+                                style: const TextStyle(color: Color(0xFFE53935), fontSize: 12),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),
@@ -161,36 +252,55 @@ class _SelectVehicleScreenState extends State<SelectVehicleScreen> {
   }
 
   Widget _buildPaymentMethod() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Image.asset('assets/images/visa.png', width: 32),
-        const SizedBox(width: 4),
-        const Icon(Icons.keyboard_arrow_down, size: 18, color: Colors.black54),
+    return PopupMenuButton<String>(
+      onSelected: (String value) {
+        setState(() {
+          _selectedPayment = value;
+        });
+      },
+      itemBuilder: (BuildContext context) => [
+        const PopupMenuItem(value: 'CASH', child: Text('Cash')),
+        const PopupMenuItem(value: 'CARD', child: Text('Card')),
+        const PopupMenuItem(value: 'WALLET', child: Text('Wallet')),
       ],
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset('assets/images/visa.png', width: 32),
+          const SizedBox(width: 4),
+          const Icon(Icons.keyboard_arrow_down, size: 18, color: Colors.black54),
+        ],
+      ),
     );
   }
 
   Widget _buildRouteInfoCard() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 4)),
-        ],
-      ),
-      child: Column(
-        children: [
-          _buildRouteLine(Colors.green, _pickupLabel),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 4),
-            child: Divider(indent: 12, endIndent: 12, height: 1),
+    return Consumer<RideProvider>(
+      builder: (context, rideProvider, _) {
+        // Use destination from provider first, then from arguments, then default
+        final destination = rideProvider.selectedDestination?.name ?? _destinationName ?? 'Select destination';
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 4)),
+            ],
           ),
-          _buildRouteLine(Colors.red, 'Select destination'),
-        ],
-      ),
+          child: Column(
+            children: [
+              _buildRouteLine(Colors.green, _pickupLabel),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 4),
+                child: Divider(indent: 12, endIndent: 12, height: 1),
+              ),
+              _buildRouteLine(Colors.red, destination),
+            ],
+          ),
+        );
+      },
     );
   }
 

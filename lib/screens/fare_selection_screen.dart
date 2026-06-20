@@ -15,7 +15,11 @@ class _FareSelectionScreenState extends State<FareSelectionScreen> {
   double _pickupLat = 24.8607;
   double _pickupLng = 67.0011;
   String _pickupLabel = 'Current Location';
+  double? _destinationLat;
+  double? _destinationLng;
+  String _destinationLabel = 'Select destination';
   String _ambulanceType = 'BASIC';
+  String? _paymentMethod;
   AmbulanceModel? _nearestAmbulance;
   bool _loadingAmbulance = true;
   bool _initialized = false;
@@ -29,7 +33,11 @@ class _FareSelectionScreenState extends State<FareSelectionScreen> {
         _pickupLat = (args['pickupLat'] as num?)?.toDouble() ?? 24.8607;
         _pickupLng = (args['pickupLng'] as num?)?.toDouble() ?? 67.0011;
         _pickupLabel = args['pickupLabel'] as String? ?? 'Current Location';
+        _destinationLat = (args['destinationLat'] as num?)?.toDouble();
+        _destinationLng = (args['destinationLng'] as num?)?.toDouble();
+        _destinationLabel = args['destinationName'] as String? ?? 'Select destination';
         _ambulanceType = args['ambulanceType'] as String? ?? 'BASIC';
+        _paymentMethod = args['paymentMethod'] as String?;
       }
       _initialized = true;
       _loadNearest();
@@ -61,7 +69,12 @@ class _FareSelectionScreenState extends State<FareSelectionScreen> {
       arguments: {
         'pickupLat': _pickupLat,
         'pickupLng': _pickupLng,
+        'pickupLabel': _pickupLabel,
+        'destinationLat': _destinationLat,
+        'destinationLng': _destinationLng,
+        'destinationName': _destinationLabel,
         'ambulanceType': _ambulanceType,
+        'paymentMethod': _paymentMethod,
         'ambulanceId': _nearestAmbulance?.id,
       },
     );
@@ -99,7 +112,7 @@ class _FareSelectionScreenState extends State<FareSelectionScreen> {
                 children: [
                   _buildSimpleRouteRow(Colors.green, _pickupLabel),
                   const Padding(padding: EdgeInsets.symmetric(vertical: 8.0), child: Divider(height: 1, thickness: 0.5)),
-                  _buildSimpleRouteRow(Colors.red, 'Select destination'),
+                  _buildSimpleRouteRow(Colors.red, _destinationLabel),
                 ],
               ),
             ),
@@ -175,7 +188,7 @@ class _FareSelectionScreenState extends State<FareSelectionScreen> {
                         children: [
                           _buildSimpleRouteRow(Colors.green, _pickupLabel, isBold: true),
                           const SizedBox(height: 12),
-                          _buildSimpleRouteRow(Colors.red, 'Destination'),
+                          _buildSimpleRouteRow(Colors.red, _destinationLabel),
                         ],
                       ),
                     ),
@@ -189,14 +202,14 @@ class _FareSelectionScreenState extends State<FareSelectionScreen> {
                           child: SizedBox(
                             height: 56,
                             child: ElevatedButton(
-                              onPressed: _nearestAmbulance == null && !_loadingAmbulance ? null : _goToPayment,
+                              onPressed: _loadingAmbulance ? null : _goToPayment,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFE53935),
+                                backgroundColor: _loadingAmbulance ? Colors.grey[400] : const Color(0xFFE53935),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                 elevation: 0,
                               ),
                               child: const Text(
-                                'Select an Ambulance',
+                                'Confirm Booking',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'Roboto'),
                               ),

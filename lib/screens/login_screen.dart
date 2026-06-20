@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:resqlink_mobile/routes/app_routes.dart';
 import '../providers/auth_provider.dart';
+import '../services/google_sign_in_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -63,6 +64,32 @@ class _LoginScreenState extends State<LoginScreen> {
       phone: isEmail ? null : input,
       password: password,
     );
+
+    if (!mounted) return;
+    if (error != null) {
+      _showError(error);
+      return;
+    }
+
+    final role = context.read<AuthProvider>().currentUser?.role ?? 'USER';
+    _navigateByRole(role);
+  }
+
+  Future<void> _signInWithGoogle() async {
+    final account = await GoogleSignInService.signIn();
+    if (account == null) {
+      _showError('Google sign-in failed');
+      return;
+    }
+
+    final idToken = await GoogleSignInService.getIdToken();
+    if (idToken == null) {
+      _showError('Failed to get Google ID token');
+      return;
+    }
+
+    if (!mounted) return;
+    final error = await context.read<AuthProvider>().googleLogin(idToken: idToken, role: _role);
 
     if (!mounted) return;
     if (error != null) {
@@ -209,13 +236,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     side: BorderSide(color: Colors.grey[300]!, width: 1),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  onPressed: () {},
+                  onPressed: isLoading ? null : _signInWithGoogle,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Image.asset('assets/images/gmail.png', width: 20, height: 20),
                       const SizedBox(width: 12),
-                      const Text('Sign up with Gmail', style: TextStyle(fontSize: 14, color: Colors.black87, fontFamily: 'Roboto', fontWeight: FontWeight.w500)),
+                      const Text('Sign in with Google', style: TextStyle(fontSize: 14, color: Colors.black87, fontFamily: 'Roboto', fontWeight: FontWeight.w500)),
                     ],
                   ),
                 ),

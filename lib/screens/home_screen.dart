@@ -50,7 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 10),
                 _buildRoundedBanner('assets/images/banner_top.png', 370),
                 const SizedBox(height: 24),
-                _buildSearchBar(),
+                _buildSearchBar(context),
                 const SizedBox(height: 18),
                 _buildLocationList(context),
                 const SizedBox(height: 24),
@@ -361,33 +361,33 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildSearchBar() {
-    return Container(
-      height: 52,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        border: Border.all(color: primaryRed.withOpacity(0.3)),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.search, color: Colors.grey[400], size: 22),
-          const SizedBox(width: 10),
-          const Expanded(
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Where to & for how much?',
-                hintStyle: TextStyle(
+  Widget _buildSearchBar(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(context, AppRoutes.selectRoute),
+      child: Container(
+        height: 52,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          border: Border.all(color: primaryRed.withOpacity(0.3)),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.search, color: Colors.grey[400], size: 22),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'Where to & for how much?',
+                style: TextStyle(
                   fontFamily: 'Roboto',
                   color: Colors.grey,
                   fontSize: 14,
                 ),
-                border: InputBorder.none,
               ),
             ),
-          ),
-          Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey[400]),
-        ],
+            Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey[400]),
+          ],
+        ),
       ),
     );
   }

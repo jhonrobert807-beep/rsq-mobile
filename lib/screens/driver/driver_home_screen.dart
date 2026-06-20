@@ -37,7 +37,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
   void _startPolling() {
     _checkForRides();
-    _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) => _checkForRides());
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _checkForRides());
   }
 
   Future<void> _checkForRides() async {

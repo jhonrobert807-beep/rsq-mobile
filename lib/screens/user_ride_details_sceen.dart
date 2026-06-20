@@ -195,9 +195,14 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Driver', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, fontFamily: 'Roboto')),
                             Text(
-                              ride.assignedDriverId != null ? 'Assigned' : 'Finding driver...',
+                              ride.driverName ?? 'Driver',
+                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, fontFamily: 'Roboto'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              ride.driverPhone ?? (ride.assignedDriverId != null ? 'Assigned' : 'Finding driver...'),
                               style: TextStyle(color: Colors.grey[500], fontSize: 13),
                             ),
                           ],

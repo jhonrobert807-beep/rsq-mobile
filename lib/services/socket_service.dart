@@ -16,6 +16,18 @@ class SocketService {
           .enableReconnection()
           .build(),
     );
+
+    _trackingSocket?.on('connect', (_) {
+      print('✅ Tracking socket connected');
+    });
+
+    _trackingSocket?.on('connect_error', (error) {
+      print('❌ Tracking connection error: $error');
+    });
+
+    _trackingSocket?.on('disconnect', (_) {
+      print('⚠️ Tracking socket disconnected');
+    });
   }
 
   static Future<void> connectChat() async {
@@ -28,6 +40,18 @@ class SocketService {
           .enableReconnection()
           .build(),
     );
+
+    _chatSocket?.on('connect', (_) {
+      print('✅ Chat socket connected');
+    });
+
+    _chatSocket?.on('connect_error', (error) {
+      print('❌ Chat connection error: $error');
+    });
+
+    _chatSocket?.on('disconnect', (_) {
+      print('⚠️ Chat socket disconnected');
+    });
   }
 
   static void emitLocation(String ambulanceId, double lat, double lng, {String? rideRequestId}) {
@@ -55,6 +79,9 @@ class SocketService {
   static void onNewMessage(Function(dynamic) callback) {
     _chatSocket?.on('newMessage', callback);
   }
+
+  static bool isChatConnected() => _chatSocket?.connected ?? false;
+  static bool isTrackingConnected() => _trackingSocket?.connected ?? false;
 
   static void disconnectTracking() => _trackingSocket?.disconnect();
   static void disconnectChat() => _chatSocket?.disconnect();

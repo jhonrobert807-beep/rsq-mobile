@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:resqlink_mobile/routes/app_routes.dart';
 import '../providers/auth_provider.dart';
+import '../services/google_sign_in_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -82,6 +83,41 @@ class _SignupScreenState extends State<SignupScreen> {
       AppRoutes.verifyOtp,
       arguments: {'identifier': identifier, 'isSignup': true},
     );
+  }
+
+  Future<void> _signUpWithGoogle() async {
+    final account = await GoogleSignInService.signIn();
+    if (account == null) {
+      _showError('Google sign-up failed');
+      return;
+    }
+
+    final idToken = await GoogleSignInService.getIdToken();
+    if (idToken == null) {
+      _showError('Failed to get Google ID token');
+      return;
+    }
+
+    if (!mounted) return;
+    final error = await context.read<AuthProvider>().googleLogin(idToken: idToken, role: _role);
+
+    if (!mounted) return;
+    if (error != null) {
+      _showError(error);
+      return;
+    }
+
+    final role = context.read<AuthProvider>().currentUser?.role ?? 'USER';
+    switch (role) {
+      case 'DRIVER':
+        Navigator.pushReplacementNamed(context, AppRoutes.driverHomeScreen);
+        break;
+      case 'PARAMEDIC':
+        Navigator.pushReplacementNamed(context, AppRoutes.paramedicHomeScreen);
+        break;
+      default:
+        Navigator.pushReplacementNamed(context, AppRoutes.home);
+    }
   }
 
   void _showError(String message) {
@@ -302,13 +338,13 @@ class _SignupScreenState extends State<SignupScreen> {
                     side: BorderSide(color: Colors.grey[300]!, width: 1),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  onPressed: () {},
+                  onPressed: () => _signUpWithGoogle(),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Image.asset('assets/images/gmail.png', width: 20, height: 20),
                       const SizedBox(width: 12),
-                      const Text('Sign up with Gmail', style: TextStyle(fontSize: 14, color: Colors.black87, fontFamily: 'Roboto', fontWeight: FontWeight.w500)),
+                      const Text('Sign up with Google', style: TextStyle(fontSize: 14, color: Colors.black87, fontFamily: 'Roboto', fontWeight: FontWeight.w500)),
                     ],
                   ),
                 ),

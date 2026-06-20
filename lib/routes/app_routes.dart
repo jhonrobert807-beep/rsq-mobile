@@ -97,8 +97,9 @@ class AppRoutes {
         final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
         return ChatScreen(
           rideRequestId: args?['rideRequestId'] ?? 'default',
-          recipientId: args?['recipientId'] ?? 'unknown',
+          recipientId: args?['recipientId'] ?? '',
           recipientName: args?['recipientName'] ?? 'User',
+          isGroup: args?['isGroup'] == true,
         );
       },
       login: (context) => const LoginScreen(),

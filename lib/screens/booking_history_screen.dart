@@ -117,7 +117,13 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
               const SizedBox(height: 15),
               ...rideProvider.myRides.map((ride) => Padding(
                 padding: const EdgeInsets.only(bottom: 15),
-                child: _BookingCard(ride: ride),
+                child: GestureDetector(
+                  onTap: () {
+                    rideProvider.setActiveRide(ride);
+                    Navigator.pushNamed(context, AppRoutes.userRideDetails);
+                  },
+                  child: _BookingCard(ride: ride),
+                ),
               )).toList(),
             ],
           );

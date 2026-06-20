@@ -36,31 +36,57 @@ class _ParamedicHomeScreenState extends State<ParamedicHomeScreen> {
   }
 
   void _startPolling() {
-    // Removed automatic polling - now on-demand via menu
+    _checkForRides();
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _checkForRides());
   }
 
   Future<void> _checkForRides() async {
-    if (!mounted) return;
-    final navigator = Navigator.of(context);
-    final rideProvider = context.read<RideProvider>();
+    if (!mounted || _hasAlert) return;
     try {
       final rides = await RideApi.getDriverRides();
+      if (!mounted || _hasAlert) return;
+
+      final rideProvider = context.read<RideProvider>();
+
+      // Ride waiting for driver — show alert to paramedic
       final waiting = rides.where((r) => r.status == 'WAITING_DRIVER_ACCEPT').toList();
-      if (waiting.isNotEmpty && mounted) {
-        rideProvider.setActiveRide(waiting.first);
-        navigator.pushNamed(AppRoutes.paramedicAlertScreen);
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No pending requests'), backgroundColor: Colors.blue),
-        );
+      if (waiting.isNotEmpty) {
+        _hasAlert = true;
+        final ride = waiting.first;
+        rideProvider.setActiveRide(ride);
+        final result = await Navigator.of(context).pushNamed(AppRoutes.paramedicAlertScreen);
+        if (!mounted) return;
+        if (result == 'accepted') {
+          await _openGroupChat(ride.id, ride.assignedDriverId ?? ride.userId, ride.patientName ?? 'Patient');
+        }
+        if (mounted) setState(() => _hasAlert = false);
+        return;
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error checking alerts: ${e.toString()}'), backgroundColor: Colors.red),
-        );
+
+      // Driver already accepted — go straight to chat
+      final active = rides.where((r) =>
+        r.status == 'DRIVER_ACCEPTED' ||
+        r.status == 'DRIVER_ARRIVED' ||
+        r.status == 'IN_TRIP'
+      ).toList();
+      if (active.isNotEmpty) {
+        _hasAlert = true;
+        final ride = active.first;
+        rideProvider.setActiveRide(ride);
+        await _openGroupChat(ride.id, ride.assignedDriverId ?? ride.userId, ride.patientName ?? 'Patient');
+        if (mounted) setState(() => _hasAlert = false);
       }
-    }
+    } catch (_) {}
+  }
+
+  Future<void> _openGroupChat(String rideId, String recipientId, String recipientName) async {
+    if (!mounted) return;
+    await Navigator.of(context).pushNamed(AppRoutes.chatScreen, arguments: {
+      'rideRequestId': rideId,
+      'recipientId': recipientId,
+      'recipientName': recipientName,
+      'isGroup': true,
+    });
   }
 
   @override
@@ -161,10 +187,11 @@ class _ParamedicHomeScreenState extends State<ParamedicHomeScreen> {
           }),
           _drawerItem(
             Icons.history,
-            'Booking History',
+            'Ride History',
             () => Navigator.pushReplacementNamed(
               context,
-              AppRoutes.bookingHistoryScreen,
+              AppRoutes.paramedicProfileScreen,
+              arguments: 'history',
             ),
           ),
           _drawerItem(

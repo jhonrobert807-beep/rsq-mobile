@@ -102,7 +102,8 @@ class ApiService {
       // Server responded with error
       final data = e.response?.data;
       if (data is Map) {
-        message = data['message'] ?? data['error'] ?? 'Server error';
+        final raw = data['message'] ?? data['error'] ?? 'Server error';
+        message = raw is List ? raw.join(', ') : raw.toString();
       } else if (data is String) {
         message = data;
       }

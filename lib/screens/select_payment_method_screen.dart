@@ -15,6 +15,8 @@ class _SelectPaymentMethodScreenState extends State<SelectPaymentMethodScreen> {
   int _selectedPayment = 0;
   double _pickupLat = 24.8607;
   double _pickupLng = 67.0011;
+  double? _destinationLat;
+  double? _destinationLng;
   String _ambulanceType = 'BASIC';
   bool _initialized = false;
 
@@ -33,6 +35,8 @@ class _SelectPaymentMethodScreenState extends State<SelectPaymentMethodScreen> {
       if (args != null) {
         _pickupLat = (args['pickupLat'] as num?)?.toDouble() ?? 24.8607;
         _pickupLng = (args['pickupLng'] as num?)?.toDouble() ?? 67.0011;
+        _destinationLat = (args['destinationLat'] as num?)?.toDouble();
+        _destinationLng = (args['destinationLng'] as num?)?.toDouble();
         _ambulanceType = args['ambulanceType'] as String? ?? 'BASIC';
       }
       _initialized = true;
@@ -44,6 +48,8 @@ class _SelectPaymentMethodScreenState extends State<SelectPaymentMethodScreen> {
       ambulanceType: _ambulanceType,
       pickupLat: _pickupLat,
       pickupLng: _pickupLng,
+      destinationLat: _destinationLat,
+      destinationLng: _destinationLng,
     );
 
     if (!mounted) return;

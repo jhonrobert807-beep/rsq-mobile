@@ -137,8 +137,15 @@ class RideProvider extends ChangeNotifier {
   Future<void> refreshActiveRide() async {
     if (_activeRide == null) return;
     try {
-      _activeRide = await RideApi.getRide(_activeRide!.id);
-      notifyListeners();
+      final updated = await RideApi.getRide(_activeRide!.id);
+      if (updated.status != _activeRide!.status ||
+          updated.assignedDriverId != _activeRide!.assignedDriverId ||
+          updated.driverName != _activeRide!.driverName ||
+          updated.etaMinutes != _activeRide!.etaMinutes ||
+          updated.cost != _activeRide!.cost) {
+        _activeRide = updated;
+        notifyListeners();
+      }
     } catch (_) {}
   }
 

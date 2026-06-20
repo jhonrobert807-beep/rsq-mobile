@@ -10,6 +10,7 @@ class RideRequestModel {
   final String? assignedDriverId;
   final String? driverName;
   final String? driverPhone;
+  final String? patientName;
   final String? ambulanceId;
   final String? ambulanceRegistrationNumber;
   final double? cost;
@@ -34,6 +35,7 @@ class RideRequestModel {
     this.assignedDriverId,
     this.driverName,
     this.driverPhone,
+    this.patientName,
     this.ambulanceId,
     this.ambulanceRegistrationNumber,
     this.cost,
@@ -59,6 +61,7 @@ class RideRequestModel {
         assignedDriverId: json['assignedDriverId'],
         driverName: json['assignedDriver']?['name'],
         driverPhone: json['assignedDriver']?['phone'],
+        patientName: json['user']?['name'],
         ambulanceId: json['ambulanceId'],
         ambulanceRegistrationNumber: json['ambulance']?['registrationNumber'],
         cost: (json['cost'] as num?)?.toDouble(),

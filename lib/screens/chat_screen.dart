@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/chat_api.dart';
@@ -5,17 +6,20 @@ import '../services/socket_service.dart';
 import '../models/chat_message_model.dart';
 import '../core/errors/app_exception.dart';
 import '../providers/auth_provider.dart';
+import '../providers/chat_provider.dart';
 
 class ChatScreen extends StatefulWidget {
   final String rideRequestId;
   final String recipientId;
   final String recipientName;
+  final bool isGroup;
 
   const ChatScreen({
     super.key,
     required this.rideRequestId,
     required this.recipientId,
     required this.recipientName,
+    this.isGroup = false,
   });
 
   @override
@@ -24,51 +28,85 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   final List<ChatMessageModel> _messages = [];
   bool _isLoading = false;
   bool _isSending = false;
   bool _isSocketConnected = false;
+  Timer? _pollTimer;
+  String? _currentUserId;
 
   @override
   void initState() {
     super.initState();
+    _currentUserId = context.read<AuthProvider>().currentUser?.id;
+    // Clear badge as soon as chat is opened
+    context.read<ChatProvider>().clearUnread();
     _initializeChat();
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _pollMessages());
   }
 
   Future<void> _initializeChat() async {
-    // Load message history from REST API
     await _loadMessages();
-
-    // Connect to WebSocket for real-time messages
     await _connectWebSocket();
   }
 
   Future<void> _connectWebSocket() async {
     try {
-      await SocketService.connectChat();
+      // Connect only if not already connected (ChatProvider may have already connected)
+      if (!SocketService.isChatConnected()) {
+        await SocketService.connectChat();
+      }
       SocketService.joinRideChat(widget.rideRequestId);
 
-      // Listen for incoming messages
+      // off() ensures only ONE listener is ever registered at a time
       SocketService.onNewMessage((data) {
-        if (mounted) {
-          final message = ChatMessageModel.fromJson(data);
-          setState(() => _messages.add(message));
-        }
+        if (!mounted) return;
+        final message = ChatMessageModel.fromJson(data);
+        if (_messages.any((m) => m.id == message.id)) return;
+        setState(() => _messages.add(message));
+        _scrollToBottom();
       });
 
       setState(() => _isSocketConnected = true);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('WebSocket connection failed, using fallback'), backgroundColor: Colors.orange),
+    } catch (_) {}
+  }
+
+  Future<void> _pollMessages() async {
+    if (!mounted) return;
+    try {
+      final messages = await ChatApi.getRideMessages(widget.rideRequestId);
+      if (!mounted) return;
+      // Replace list only if something actually changed (by ID set comparison)
+      final existingIds = _messages.map((m) => m.id).toSet();
+      final fetchedIds = messages.map((m) => m.id).toSet();
+      if (!existingIds.containsAll(fetchedIds) || !fetchedIds.containsAll(existingIds)) {
+        setState(() {
+          _messages.clear();
+          _messages.addAll(messages);
+        });
+        _scrollToBottom();
+      }
+    } catch (_) {}
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
         );
       }
-    }
+    });
   }
 
   @override
   void dispose() {
+    _pollTimer?.cancel();
     _messageController.dispose();
+    _scrollController.dispose();
     SocketService.disconnectChat();
     super.dispose();
   }
@@ -82,6 +120,7 @@ class _ChatScreenState extends State<ChatScreen> {
           _messages.clear();
           _messages.addAll(messages);
         });
+        _scrollToBottom();
       }
     } on AppException catch (e) {
       if (mounted) {
@@ -101,34 +140,14 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() => _isSending = true);
 
     try {
-      final userId = context.read<AuthProvider>().currentUser?.id;
-      if (userId == null) throw Exception('User not authenticated');
-
-      if (_isSocketConnected) {
-        // Send via WebSocket (instant) - DON'T send senderId, backend extracts from JWT
-        SocketService.sendChatMessage({
-          'receiverId': widget.recipientId,
-          'rideRequestId': widget.rideRequestId,
-          'message': message,
-          'messageType': 'TEXT',
-        });
-
-        // Optimistic update: add message to UI immediately
-        final optimisticMessage = ChatMessageModel(
-          id: 'temp-${DateTime.now().millisecondsSinceEpoch}',
-          rideRequestId: widget.rideRequestId,
-          senderId: userId,
-          receiverId: widget.recipientId,
-          message: message,
-          messageType: 'TEXT',
-          sentAt: DateTime.now(),
-        );
-        setState(() => _messages.add(optimisticMessage));
-      } else {
-        // Fallback to REST if WebSocket unavailable
-        final sentMessage = await ChatApi.sendMessage(widget.rideRequestId, message);
+      final sentMessage = await ChatApi.sendMessage(
+          widget.rideRequestId, message, widget.recipientId);
+      if (mounted) {
         setState(() => _messages.add(sentMessage));
+        _scrollToBottom();
       }
+
+      // WebSocket broadcast is handled by the backend after REST save — no double-emit needed
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -139,39 +158,6 @@ class _ChatScreenState extends State<ChatScreen> {
       if (mounted) setState(() => _isSending = false);
     }
   }
-
-  @override
-  Widget build(BuildContext context) {
-    return _ChatScreenUI(
-      recipientName: widget.recipientName,
-      messages: _messages,
-      isLoading: _isLoading,
-      isSending: _isSending,
-      messageController: _messageController,
-      onSendMessage: _sendMessage,
-      onRefresh: _loadMessages,
-    );
-  }
-}
-
-class _ChatScreenUI extends StatelessWidget {
-  final String recipientName;
-  final List<ChatMessageModel> messages;
-  final bool isLoading;
-  final bool isSending;
-  final TextEditingController messageController;
-  final Function(String) onSendMessage;
-  final Future<void> Function() onRefresh;
-
-  const _ChatScreenUI({
-    required this.recipientName,
-    required this.messages,
-    required this.isLoading,
-    required this.isSending,
-    required this.messageController,
-    required this.onSendMessage,
-    required this.onRefresh,
-  });
 
   @override
   Widget build(BuildContext context) {
@@ -187,18 +173,27 @@ class _ChatScreenUI extends StatelessWidget {
         titleSpacing: 0,
         title: Row(
           children: [
-            const CircleAvatar(
+            CircleAvatar(
               radius: 18,
-              backgroundImage: AssetImage('assets/images/paramedic.jpg'),
+              backgroundColor: widget.isGroup ? const Color(0xFF8D0B0B) : Colors.grey,
+              child: Icon(
+                widget.isGroup ? Icons.group : Icons.person,
+                color: Colors.white,
+                size: 20,
+              ),
             ),
             const SizedBox(width: 10),
-            Text(
-              recipientName,
-              style: const TextStyle(
-                color: Colors.black,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.isGroup ? 'Ride Group Chat' : widget.recipientName,
+                  style: const TextStyle(color: Colors.black, fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+                if (widget.isGroup)
+                  const Text('Patient · Driver · Paramedic',
+                      style: TextStyle(color: Colors.grey, fontSize: 11)),
+              ],
             ),
           ],
         ),
@@ -216,33 +211,26 @@ class _ChatScreenUI extends StatelessWidget {
       body: Column(
         children: [
           Expanded(
-            child: isLoading
+            child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : RefreshIndicator(
-                    onRefresh: onRefresh,
-                    child: messages.isEmpty
-                        ? ListView(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                            children: [
-                              _buildSystemCard(),
-                              const SizedBox(height: 20),
-                              Center(
-                                child: Text(
-                                  'No messages yet. Start the conversation!',
-                                  style: TextStyle(color: Colors.grey[600]),
-                                ),
-                              ),
-                            ],
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                            itemCount: messages.length + 1,
-                            itemBuilder: (context, index) {
-                              if (index == 0) return _buildSystemCard();
-                              final message = messages[index - 1];
-                              return _buildMessage(message.message, message.messageType == 'SENT');
-                            },
-                          ),
+                    onRefresh: _loadMessages,
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
+                      itemCount: _messages.isEmpty
+                          ? 1
+                          : _messages.length + 1,
+                      itemBuilder: (context, index) {
+                        if (index == 0) return _buildSystemCard();
+                        if (_messages.isEmpty) return const SizedBox.shrink();
+                        final msg = _messages[index - 1];
+                        final isMine = msg.senderId == _currentUserId;
+                        return _buildMessage(msg.message, isMine,
+                            senderName: (!isMine && widget.isGroup) ? (msg.senderName ?? 'Member') : null);
+                      },
+                    ),
                   ),
           ),
           _buildInputBar(),
@@ -250,8 +238,6 @@ class _ChatScreenUI extends StatelessWidget {
       ),
     );
   }
-
-  // --- UI Components ---
 
   Widget _buildSystemCard() {
     return Container(
@@ -268,12 +254,12 @@ class _ChatScreenUI extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        children: const [
+      child: const Column(
+        children: [
           Text(
             "Start Conversation",
             style: TextStyle(
-              color: Color(0xFF008B8B), // Dark Teal
+              color: Color(0xFF008B8B),
               fontWeight: FontWeight.bold,
               fontSize: 15,
             ),
@@ -289,44 +275,59 @@ class _ChatScreenUI extends StatelessWidget {
     );
   }
 
-  Widget _buildMessage(String text, bool isSent) {
+  Widget _buildMessage(String text, bool isMine, {String? senderName}) {
     return Align(
-      alignment: isSent ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          // Sent: Lavender/Light Blue | Received: White
-          color: isSent ? const Color(0xFFE7E7FF) : Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(12),
-            topRight: const Radius.circular(12),
-            bottomLeft: Radius.circular(isSent ? 12 : 0),
-            bottomRight: Radius.circular(isSent ? 0 : 12),
+      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+      child: Column(
+        crossAxisAlignment: isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          if (senderName != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 2),
+              child: Text(
+                senderName,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF8D0B0B),
+                ),
+              ),
+            ),
+          Container(
+            margin: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: isMine ? const Color(0xFFDCF8C6) : Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(12),
+                topRight: const Radius.circular(12),
+                bottomLeft: Radius.circular(isMine ? 12 : 0),
+                bottomRight: Radius.circular(isMine ? 0 : 12),
+              ),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4, offset: const Offset(0, 2)),
+              ],
+            ),
+            constraints: const BoxConstraints(maxWidth: 260),
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 14, color: Colors.black87, height: 1.4),
+            ),
           ),
-        ),
-        constraints: const BoxConstraints(maxWidth: 280),
-        child: Text(
-          text,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Colors.black87,
-            height: 1.4,
-          ),
-        ),
+        ],
       ),
     );
   }
 
   Widget _buildInputBar() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(10, 0, 10, 20),
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 20),
       color: Colors.transparent,
       child: Row(
         children: [
           Expanded(
             child: Container(
-              height: 50,
+              constraints: const BoxConstraints(minHeight: 50),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(25),
@@ -345,14 +346,12 @@ class _ChatScreenUI extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       child: TextField(
-                        controller: messageController,
-                        onSubmitted: (_) => isSending ? null : onSendMessage(messageController.text),
+                        controller: _messageController,
+                        onSubmitted: (_) =>
+                            _isSending ? null : _sendMessage(_messageController.text),
                         decoration: const InputDecoration(
                           hintText: "Type message",
-                          hintStyle: TextStyle(
-                            color: Colors.grey,
-                            fontSize: 15,
-                          ),
+                          hintStyle: TextStyle(color: Colors.grey, fontSize: 15),
                           border: InputBorder.none,
                         ),
                       ),
@@ -371,14 +370,18 @@ class _ChatScreenUI extends StatelessWidget {
             radius: 25,
             backgroundColor: const Color(0xFF008B8B),
             child: IconButton(
-              icon: isSending
+              icon: _isSending
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white)),
                     )
                   : const Icon(Icons.send, color: Colors.white),
-              onPressed: isSending ? null : () => onSendMessage(messageController.text),
+              onPressed:
+                  _isSending ? null : () => _sendMessage(_messageController.text),
             ),
           ),
         ],

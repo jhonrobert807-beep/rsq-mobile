@@ -18,28 +18,10 @@ class _ParamedicAlertScreenState extends State<ParamedicAlertScreen> {
   Future<void> _accept() async {
     final ride = context.read<RideProvider>().activeRide;
     if (ride == null) return;
-    setState(() => _isLoading = true);
-    try {
-      await RideApi.acceptRide(ride.id);
-      if (mounted) {
-        Navigator.pushReplacementNamed(
-          context,
-          AppRoutes.chatScreen,
-          arguments: {
-            'rideRequestId': ride.id,
-            'recipientId': ride.userId,
-            'recipientName': 'Patient',
-          },
-        );
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to accept. Try again.'), backgroundColor: Colors.red),
-        );
-        setState(() => _isLoading = false);
-      }
-    }
+    // Paramedic is pre-assigned by admin — no API call needed.
+    // Pop alert first so home screen's .then() fires and resets _hasAlert,
+    // then home screen immediately pushes chat directly.
+    if (mounted) Navigator.pop(context, 'accepted');
   }
 
   Future<void> _reject() async {

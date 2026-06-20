@@ -19,6 +19,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   late final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   Timer? _pollTimer;
   bool _hasAlert = false;
+  int _todayRides = 0;
+  double _todayEarnings = 0;
 
   static const Color primaryRed = Color(0xFF8D0B0B);
   static const Color lightPinkBg = Color(0xFFFFF5F5);
@@ -27,6 +29,21 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   void initState() {
     super.initState();
     _startPolling();
+    _loadStats();
+  }
+
+  Future<void> _loadStats() async {
+    try {
+      final rides = await RideApi.getDriverRides();
+      final completed = rides.where((r) => r.status == 'COMPLETED').toList();
+      final totalEarnings = completed.fold<double>(0, (sum, r) => sum + (r.cost ?? 0));
+      if (mounted) {
+        setState(() {
+          _todayRides = completed.length;
+          _todayEarnings = totalEarnings;
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -46,11 +63,26 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     final rideProvider = context.read<RideProvider>();
     try {
       final rides = await RideApi.getDriverRides();
+      // Check for rides waiting acceptance
       final waiting = rides.where((r) => r.status == 'WAITING_DRIVER_ACCEPT').toList();
       if (waiting.isNotEmpty && mounted && !_hasAlert) {
         _hasAlert = true;
         rideProvider.setActiveRide(waiting.first);
         navigator.pushNamed(AppRoutes.driverAlertScreen).then((_) {
+          if (mounted) setState(() => _hasAlert = false);
+        });
+        return;
+      }
+      // Check for already accepted/active rides — navigate directly to ride screen
+      final active = rides.where((r) =>
+        r.status == 'DRIVER_ACCEPTED' ||
+        r.status == 'DRIVER_ARRIVED' ||
+        r.status == 'IN_TRIP'
+      ).toList();
+      if (active.isNotEmpty && mounted && !_hasAlert) {
+        _hasAlert = true;
+        rideProvider.setActiveRide(active.first);
+        navigator.pushNamed(AppRoutes.driverRideScreen).then((_) {
           if (mounted) setState(() => _hasAlert = false);
         });
       }
@@ -155,10 +187,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           }),
           _drawerItem(
             Icons.history,
-            'Booking History',
+            'Ride History',
             () => Navigator.pushReplacementNamed(
               context,
-              AppRoutes.bookingHistoryScreen,
+              AppRoutes.driverProfileScreen,
+              arguments: 'history',
             ),
           ),
           _drawerItem(
@@ -431,11 +464,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     return Row(
       children: [
         Expanded(
-          child: _buildStatCard('Today\'s Rides', '0', Colors.blue),
+          child: _buildStatCard('Total Rides', '$_todayRides', Colors.blue),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: _buildStatCard('Earnings', '₨0', Colors.green),
+          child: _buildStatCard('Total Earned', '₨${_todayEarnings.toStringAsFixed(0)}', Colors.green),
         ),
       ],
     );

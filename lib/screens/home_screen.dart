@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:resqlink_mobile/routes/app_routes.dart';
 import '../providers/auth_provider.dart';
+import '../providers/ride_provider.dart';
+import '../services/ride_api.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,6 +17,42 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  Timer? _pollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkActiveRide();
+    _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) => _checkActiveRide());
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _checkActiveRide() async {
+    if (!mounted) return;
+    try {
+      final rides = await RideApi.getMyRides();
+      final active = rides.where((r) =>
+        r.status == 'CREATED' ||
+        r.status == 'DISPATCHING' ||
+        r.status == 'WAITING_DRIVER_ACCEPT' ||
+        r.status == 'DRIVER_ACCEPTED' ||
+        r.status == 'DRIVER_ARRIVED' ||
+        r.status == 'IN_TRIP'
+      ).toList();
+      if (mounted) {
+        if (active.isNotEmpty) {
+          context.read<RideProvider>().setActiveRide(active.first);
+        } else {
+          context.read<RideProvider>().clearActiveRide();
+        }
+      }
+    } catch (_) {}
+  }
 
   // Theme Constants
   static const Color primaryRed = Color(0xFF8D0B0B);
@@ -48,6 +87,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               children: [
                 const SizedBox(height: 10),
+                _buildActiveRideBanner(context),
                 _buildRoundedBanner('assets/images/banner_top.png', 370),
                 const SizedBox(height: 24),
                 _buildSearchBar(context),
@@ -342,6 +382,56 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(width: 40),
       ],
+    );
+  }
+
+  Widget _buildActiveRideBanner(BuildContext context) {
+    final ride = context.watch<RideProvider>().activeRide;
+    if (ride == null) return const SizedBox.shrink();
+
+    final statusLabel = ride.status.replaceAll('_', ' ');
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(context, AppRoutes.userRideDetails),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFEBEB),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: primaryRed.withOpacity(0.4)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.local_hospital, color: primaryRed, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Active Ride in Progress',
+                    style: TextStyle(
+                      fontFamily: 'Roboto',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: primaryRed,
+                    ),
+                  ),
+                  Text(
+                    statusLabel,
+                    style: const TextStyle(
+                      fontFamily: 'Roboto',
+                      fontSize: 12,
+                      color: Colors.black54,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, color: primaryRed, size: 14),
+          ],
+        ),
+      ),
     );
   }
 

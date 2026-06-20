@@ -77,6 +77,7 @@ class SocketService {
   }
 
   static void onNewMessage(Function(dynamic) callback) {
+    _chatSocket?.off('newMessage'); // remove any existing listener first
     _chatSocket?.on('newMessage', callback);
   }
 

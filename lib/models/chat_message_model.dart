@@ -6,6 +6,8 @@ class ChatMessageModel {
   final String messageType;
   final String message;
   final DateTime sentAt;
+  final String? senderName;
+  final String? senderRole;
 
   ChatMessageModel({
     required this.id,
@@ -15,6 +17,8 @@ class ChatMessageModel {
     required this.messageType,
     required this.message,
     required this.sentAt,
+    this.senderName,
+    this.senderRole,
   });
 
   factory ChatMessageModel.fromJson(Map<String, dynamic> json) => ChatMessageModel(
@@ -25,5 +29,7 @@ class ChatMessageModel {
         messageType: json['messageType'] ?? 'TEXT',
         message: json['message'],
         sentAt: DateTime.parse(json['sentAt']),
+        senderName: json['sender']?['name'],
+        senderRole: json['sender']?['role'],
       );
 }

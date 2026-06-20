@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/ride_provider.dart';
+import '../../providers/chat_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../routes/app_routes.dart';
 import '../../services/ride_api.dart';
 
@@ -14,6 +17,38 @@ class DriverRideScreen extends StatefulWidget {
 
 class _DriverRideScreenState extends State<DriverRideScreen> {
   bool _isEnding = false;
+  Timer? _pollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _refreshRide());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _connectChatBackground());
+  }
+
+  void _connectChatBackground() {
+    final ride = context.read<RideProvider>().activeRide;
+    final userId = context.read<AuthProvider>().currentUser?.id;
+    if (ride != null && userId != null) {
+      context.read<ChatProvider>().connectBackground(ride.id, userId);
+    }
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refreshRide() async {
+    if (!mounted) return;
+    final ride = context.read<RideProvider>().activeRide;
+    if (ride == null) return;
+    try {
+      final updated = await RideApi.getRide(ride.id);
+      if (mounted) context.read<RideProvider>().setActiveRide(updated);
+    } catch (_) {}
+  }
 
   Future<void> _endRide() async {
     final ride = context.read<RideProvider>().activeRide;
@@ -41,7 +76,7 @@ class _DriverRideScreenState extends State<DriverRideScreen> {
       await RideApi.updateStatus(ride.id, 'COMPLETED');
       if (mounted) {
         context.read<RideProvider>().clearActiveRide();
-        Navigator.pushReplacementNamed(context, AppRoutes.driverProfileScreen);
+        Navigator.pushReplacementNamed(context, AppRoutes.driverHomeScreen);
       }
     } catch (_) {
       if (mounted) {
@@ -63,8 +98,13 @@ class _DriverRideScreenState extends State<DriverRideScreen> {
     final pickupLabel = ride != null
         ? '${ride.pickupLat.toStringAsFixed(4)}, ${ride.pickupLng.toStringAsFixed(4)}'
         : 'Unknown';
+    final destinationLabel = (ride?.destinationLat != null && ride?.destinationLng != null)
+        ? '${ride!.destinationLat!.toStringAsFixed(4)}, ${ride.destinationLng!.toStringAsFixed(4)}'
+        : null;
     final typeLabel = ride?.ambulanceType == 'WITH_DOCTOR' ? 'With Consultant' : 'Basic Ambulance';
     final statusLabel = ride?.status.replaceAll('_', ' ') ?? 'ACTIVE';
+    final etaLabel = ride?.etaMinutes != null ? '${ride!.etaMinutes} min' : '--';
+    final fareLabel = ride?.formattedCost ?? '--';
 
     return Scaffold(
       body: Stack(
@@ -88,6 +128,10 @@ class _DriverRideScreenState extends State<DriverRideScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildRouteRow(Colors.green, 'Pickup: $pickupLabel'),
+                  if (destinationLabel != null) ...[
+                    const SizedBox(height: 12),
+                    _buildRouteRow(Colors.red, 'Drop: $destinationLabel'),
+                  ],
                   const SizedBox(height: 12),
                   _buildRouteRow(Colors.blue, typeLabel),
                   const SizedBox(height: 8),
@@ -101,19 +145,65 @@ class _DriverRideScreenState extends State<DriverRideScreen> {
             ),
           ),
 
-          if (ride?.formattedCost != null)
-            Positioned(
-              bottom: 120,
-              left: 20,
-              right: 20,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildInfoChip(Icons.timer_outlined, ride!.formattedEta, 'ETA'),
-                  _buildInfoChip(Icons.attach_money, ride.formattedCost, 'Fare'),
-                ],
-              ),
+          Positioned(
+            bottom: 120,
+            left: 20,
+            right: 20,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildInfoChip(Icons.timer_outlined, etaLabel, 'ETA'),
+                _buildInfoChip(Icons.attach_money, fareLabel, 'Fare'),
+              ],
             ),
+          ),
+
+          Positioned(
+            bottom: 110,
+            right: 20,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                FloatingActionButton(
+                  mini: true,
+                  backgroundColor: Colors.white,
+                  onPressed: () {
+                    final ride = context.read<RideProvider>().activeRide;
+                    if (ride != null) {
+                      context.read<ChatProvider>().clearUnread();
+                      Navigator.pushNamed(context, AppRoutes.chatScreen, arguments: {
+                        'rideRequestId': ride.id,
+                        'recipientId': ride.userId,
+                        'recipientName': ride.patientName ?? 'Patient',
+                        'isGroup': ride.ambulanceType == 'WITH_DOCTOR',
+                      });
+                    }
+                  },
+                  child: const Icon(Icons.chat_bubble_outline, color: Color(0xFFD30000)),
+                ),
+                Consumer<ChatProvider>(
+                  builder: (_, chat, __) {
+                    if (chat.unreadCount == 0) return const SizedBox.shrink();
+                    return Positioned(
+                      top: -4,
+                      right: -4,
+                      child: Container(
+                        width: 18,
+                        height: 18,
+                        decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                        child: Center(
+                          child: Text(
+                            chat.unreadCount > 9 ? '9+' : '${chat.unreadCount}',
+                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
 
           Positioned(
             bottom: 40,

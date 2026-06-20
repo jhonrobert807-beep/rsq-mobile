@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/ride_provider.dart';
+import '../providers/chat_provider.dart';
+import '../providers/auth_provider.dart';
 import '../routes/app_routes.dart';
 import '../services/ride_api.dart';
 
@@ -23,6 +25,15 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
     _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       if (mounted) context.read<RideProvider>().refreshActiveRide();
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _connectChatBackground());
+  }
+
+  void _connectChatBackground() {
+    final ride = context.read<RideProvider>().activeRide;
+    final userId = context.read<AuthProvider>().currentUser?.id;
+    if (ride != null && userId != null) {
+      context.read<ChatProvider>().connectBackground(ride.id, userId);
+    }
   }
 
   @override
@@ -311,20 +322,36 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
   }
 
   Widget _buildChatCircle() {
+    final ride = context.read<RideProvider>().activeRide;
+    final unread = context.watch<ChatProvider>().unreadCount;
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        _buildActionCircle(Icons.chat_bubble_outline),
-        Positioned(
-          top: 0,
-          right: 0,
-          child: Container(
-            width: 20,
-            height: 20,
-            decoration: const BoxDecoration(color: Color(0xFF2196F3), shape: BoxShape.circle),
-            child: const Center(child: Text('!', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))),
+        _buildActionCircle(Icons.chat_bubble_outline, onTap: ride != null ? () {
+          context.read<ChatProvider>().clearUnread();
+          Navigator.pushNamed(context, AppRoutes.chatScreen, arguments: {
+            'rideRequestId': ride.id,
+            'recipientId': ride.assignedDriverId ?? '',
+            'recipientName': ride.driverName ?? 'Driver',
+            'isGroup': ride.ambulanceType == 'WITH_DOCTOR',
+          });
+        } : null),
+        if (unread > 0)
+          Positioned(
+            top: -2,
+            right: -2,
+            child: Container(
+              width: 20,
+              height: 20,
+              decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+              child: Center(
+                child: Text(
+                  unread > 9 ? '9+' : '$unread',
+                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
           ),
-        ),
       ],
     );
   }

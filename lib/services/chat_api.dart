@@ -8,11 +8,14 @@ class ChatApi {
     return (result as List).map((e) => ChatMessageModel.fromJson(e)).toList();
   }
 
-  static Future<ChatMessageModel> sendMessage(String rideRequestId, String message) async {
-    final result = await ApiService.post(
-      ApiConstants.chats,
-      data: {'rideRequestId': rideRequestId, 'message': message, 'messageType': 'TEXT'},
-    );
+  static Future<ChatMessageModel> sendMessage(String rideRequestId, String message, String receiverId) async {
+    final data = <String, dynamic>{
+      'rideRequestId': rideRequestId,
+      'message': message,
+      'messageType': 'TEXT',
+    };
+    if (receiverId.isNotEmpty) data['receiverId'] = receiverId;
+    final result = await ApiService.post(ApiConstants.chats, data: data);
     return ChatMessageModel.fromJson(result);
   }
 

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:resqlink_mobile/routes/app_routes.dart';
 import '../../models/driver_profile_model.dart';
+import '../../models/ride_request_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/ride_provider.dart';
 import '../../services/driver_api.dart';
@@ -20,12 +21,26 @@ class _ParamedicProfileScreenState extends State<ParamedicProfileScreen> {
   DriverProfileModel? _paramedicProfile;
   Timer? _pollTimer;
   bool _hasAlert = false;
+  int _selectedTab = 0;
+  List<RideRequestModel> _myRides = [];
 
   @override
   void initState() {
     super.initState();
     _loadParamedicProfile();
+    _loadRideHistory();
     _startPolling();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args == 'history') setState(() => _selectedTab = 1);
+    });
+  }
+
+  Future<void> _loadRideHistory() async {
+    try {
+      final rides = await RideApi.getDriverRides();
+      if (mounted) setState(() => _myRides = rides);
+    } catch (_) {}
   }
 
   @override
@@ -50,19 +65,50 @@ class _ParamedicProfileScreenState extends State<ParamedicProfileScreen> {
 
   Future<void> _checkForRides() async {
     if (!mounted || _hasAlert) return;
-    final navigator = Navigator.of(context);
-    final rideProvider = context.read<RideProvider>();
     try {
       final rides = await RideApi.getDriverRides();
+      if (!mounted || _hasAlert) return;
+      final rideProvider = context.read<RideProvider>();
+
+      // Show alert only for WAITING_DRIVER_ACCEPT
       final waiting = rides.where((r) => r.status == 'WAITING_DRIVER_ACCEPT').toList();
-      if (waiting.isNotEmpty && mounted && !_hasAlert) {
+      if (waiting.isNotEmpty) {
         _hasAlert = true;
-        rideProvider.setActiveRide(waiting.first);
-        navigator.pushNamed(AppRoutes.paramedicAlertScreen).then((_) {
-          if (mounted) setState(() => _hasAlert = false);
-        });
+        final ride = waiting.first;
+        rideProvider.setActiveRide(ride);
+        final result = await Navigator.of(context).pushNamed(AppRoutes.paramedicAlertScreen);
+        if (!mounted) return;
+        if (result == 'accepted') {
+          await _openGroupChat(ride.id, ride.assignedDriverId ?? ride.userId, ride.patientName ?? 'Patient');
+        }
+        if (mounted) setState(() => _hasAlert = false);
+        return;
+      }
+
+      // Driver already accepted — go straight to chat
+      final active = rides.where((r) =>
+        r.status == 'DRIVER_ACCEPTED' ||
+        r.status == 'DRIVER_ARRIVED' ||
+        r.status == 'IN_TRIP'
+      ).toList();
+      if (active.isNotEmpty) {
+        _hasAlert = true;
+        final ride = active.first;
+        rideProvider.setActiveRide(ride);
+        await _openGroupChat(ride.id, ride.assignedDriverId ?? ride.userId, ride.patientName ?? 'Patient');
+        if (mounted) setState(() => _hasAlert = false);
       }
     } catch (_) {}
+  }
+
+  Future<void> _openGroupChat(String rideId, String recipientId, String recipientName) async {
+    if (!mounted) return;
+    await Navigator.of(context).pushNamed(AppRoutes.chatScreen, arguments: {
+      'rideRequestId': rideId,
+      'recipientId': recipientId,
+      'recipientName': recipientName,
+      'isGroup': true,
+    });
   }
 
   @override
@@ -210,41 +256,135 @@ class _ParamedicProfileScreenState extends State<ParamedicProfileScreen> {
 
             const SizedBox(height: 20),
 
-            _buildProfileCard([
-              _buildListTile(Icons.account_box_outlined, 'Edit profile information', onTap: () => Navigator.pushReplacementNamed(context, AppRoutes.editParamedicProfileScreen)),
-              const Divider(height: 1),
-              _buildListTile(Icons.notifications_none_outlined, 'Notifications', trailing: 'ON'),
-              const Divider(height: 1),
-              _buildListTile(Icons.translate, 'Language', trailing: 'English'),
-            ]),
-
-            _buildProfileCard([
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Text('Profile Details', style: TextStyle(color: Colors.black87, fontSize: 14)),
+            // Tab selector
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  _tabButton('Profile', 0),
+                  const SizedBox(width: 12),
+                  _tabButton('Ride History', 1),
+                ],
               ),
-              const Divider(height: 1),
-              _buildListTile(Icons.face_retouching_natural_outlined, 'Theme', trailing: 'Light mode'),
-            ]),
+            ),
+            const SizedBox(height: 16),
 
-            _buildProfileCard([
-              _buildListTile(Icons.people_outline, 'Help & Support'),
-              const Divider(height: 1),
-              _buildListTile(Icons.chat_bubble_outline, 'Contact us'),
-              const Divider(height: 1),
-              _buildListTile(Icons.lock_outline, 'Privacy policy'),
-              const Divider(height: 1),
-              _buildListTile(Icons.logout, 'Logout', isLogout: true, onTap: () async {
-                final navigator = Navigator.of(context);
-                await context.read<AuthProvider>().logout();
-                if (mounted) navigator.pushReplacementNamed(AppRoutes.welcome);
-              }),
-            ]),
+            if (_selectedTab == 0) ...[
+              _buildProfileCard([
+                _buildListTile(Icons.account_box_outlined, 'Edit profile information', onTap: () => Navigator.pushReplacementNamed(context, AppRoutes.editParamedicProfileScreen)),
+                const Divider(height: 1),
+                _buildListTile(Icons.notifications_none_outlined, 'Notifications', trailing: 'ON'),
+                const Divider(height: 1),
+                _buildListTile(Icons.translate, 'Language', trailing: 'English'),
+              ]),
+              _buildProfileCard([
+                _buildListTile(Icons.people_outline, 'Help & Support'),
+                const Divider(height: 1),
+                _buildListTile(Icons.lock_outline, 'Privacy policy'),
+                const Divider(height: 1),
+                _buildListTile(Icons.logout, 'Logout', isLogout: true, onTap: () async {
+                  final navigator = Navigator.of(context);
+                  await context.read<AuthProvider>().logout();
+                  if (mounted) navigator.pushReplacementNamed(AppRoutes.welcome);
+                }),
+              ]),
+            ] else
+              _buildRideHistory(),
+
             const SizedBox(height: 20),
           ],
         ),
       ),
       ),
+    );
+  }
+
+  Widget _tabButton(String label, int index) {
+    final isActive = _selectedTab == index;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedTab = index),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFFA51C24) : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isActive ? Colors.white : Colors.black54,
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRideHistory() {
+    if (_myRides.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(40),
+        child: Center(child: Text('No ride history', style: TextStyle(color: Colors.grey))),
+      );
+    }
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      itemCount: _myRides.length,
+      itemBuilder: (_, i) {
+        final ride = _myRides[i];
+        final isCompleted = ride.status == 'COMPLETED';
+        final statusColor = isCompleted ? Colors.green : ride.status == 'CANCELLED' ? Colors.red : Colors.orange;
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44, height: 44,
+                decoration: BoxDecoration(color: const Color(0xFFFFF5F5), borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.local_hospital, color: Color(0xFFA51C24), size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      ride.ambulanceType == 'WITH_DOCTOR' ? 'With Consultant' : 'Basic Ambulance',
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${ride.requestedAt.day}/${ride.requestedAt.month}/${ride.requestedAt.year}',
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                    child: Text(ride.status.replaceAll('_', ' '), style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.w600)),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(ride.formattedCost, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

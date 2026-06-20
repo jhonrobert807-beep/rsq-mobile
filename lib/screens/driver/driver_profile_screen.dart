@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:resqlink_mobile/routes/app_routes.dart';
 import '../../models/driver_profile_model.dart';
+import '../../models/ride_request_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/ride_provider.dart';
 import '../../services/driver_api.dart';
@@ -21,12 +22,26 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
   Timer? _pollTimer;
   bool _hasAlert = false;
   int _selectedTab = 0;
+  List<RideRequestModel> _myRides = [];
 
   @override
   void initState() {
     super.initState();
     _loadDriverProfile();
+    _loadRideHistory();
     _startPolling();
+    // Open ride history tab if navigated with argument
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args == 'history') setState(() => _selectedTab = 1);
+    });
+  }
+
+  Future<void> _loadRideHistory() async {
+    try {
+      final rides = await RideApi.getDriverRides();
+      if (mounted) setState(() => _myRides = rides);
+    } catch (_) {}
   }
 
   @override
@@ -79,7 +94,7 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
       child: Scaffold(
         backgroundColor: const Color(0xFFF8F9FA),
         bottomNavigationBar: _buildBottomNav(),
-        body: SingleChildScrollView(
+        body: _selectedTab == 1 ? _buildRideHistory() : SingleChildScrollView(
           child: Column(
           children: [
             Stack(
@@ -249,6 +264,81 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
     );
   }
 
+  Widget _buildRideHistory() {
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(20, 70, 20, 20),
+      itemCount: _myRides.isEmpty ? 1 : _myRides.length + 1,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: Text('Ride History', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          );
+        }
+        if (_myRides.isEmpty) {
+          return const Center(child: Padding(
+            padding: EdgeInsets.only(top: 40),
+            child: Text('No ride history yet.', style: TextStyle(color: Colors.grey)),
+          ));
+        }
+        final ride = _myRides[index - 1];
+            final statusColor = ride.status == 'COMPLETED'
+                  ? Colors.green
+                  : ride.status == 'CANCELLED'
+                      ? Colors.red
+                      : Colors.orange;
+            return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8)],
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.local_hospital, color: Color(0xFF8D0B0B), size: 28),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(ride.ambulanceType.replaceAll('_', ' '),
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${ride.requestedAt.day}/${ride.requestedAt.month}/${ride.requestedAt.year}  •  ${ride.requestedAt.hour.toString().padLeft(2,'0')}:${ride.requestedAt.minute.toString().padLeft(2,'0')}',
+                            style: const TextStyle(color: Colors.grey, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: statusColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            ride.status.replaceAll('_', ' '),
+                            style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(ride.formattedCost,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        }
+
   Widget _buildBottomNav() {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -262,12 +352,12 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           GestureDetector(
-            onTap: () => setState(() => _selectedTab = 0),
+            onTap: () => Navigator.pushReplacementNamed(context, AppRoutes.driverHomeScreen),
             child: _navItem(Icons.home, 'Home', _selectedTab == 0),
           ),
           GestureDetector(
             onTap: () => setState(() => _selectedTab = 1),
-            child: _navItem(Icons.person, 'Profile', _selectedTab == 1),
+            child: _navItem(Icons.history, 'Rides', _selectedTab == 1),
           ),
         ],
       ),

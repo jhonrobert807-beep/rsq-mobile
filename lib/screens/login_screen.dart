@@ -247,28 +247,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
-
-              SizedBox(
-                height: 50,
-                width: double.infinity,
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    side: BorderSide(color: Colors.grey[300]!, width: 1),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  onPressed: () {},
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Image.asset('assets/images/facebook.png', width: 20, height: 20),
-                      const SizedBox(width: 12),
-                      const Text('Sign up with Facebook', style: TextStyle(fontSize: 14, color: Colors.black87, fontFamily: 'Roboto', fontWeight: FontWeight.w500)),
-                    ],
-                  ),
-                ),
-              ),
               const SizedBox(height: 32),
 
               Center(

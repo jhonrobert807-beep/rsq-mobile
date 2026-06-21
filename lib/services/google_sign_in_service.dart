@@ -2,10 +2,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 class GoogleSignInService {
   static final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: [
-      'email',
-      'profile',
-    ],
+    clientId: '69448074236-1b05qm623tinea2gotrh5qgjt7kb5n0i.apps.googleusercontent.com',
+    scopes: ['email', 'profile'],
   );
 
   static Future<GoogleSignInAccount?> signIn() async {
@@ -29,9 +27,7 @@ class GoogleSignInService {
   static Future<String?> getIdToken() async {
     try {
       final account = _googleSignIn.currentUser;
-      if (account == null) {
-        return null;
-      }
+      if (account == null) return null;
       final auth = await account.authentication;
       return auth.idToken;
     } catch (error) {

@@ -2,6 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:dio/dio.dart';
 import '../../providers/ride_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/auth_provider.dart';
@@ -18,12 +21,16 @@ class DriverRideScreen extends StatefulWidget {
 class _DriverRideScreenState extends State<DriverRideScreen> {
   bool _isEnding = false;
   Timer? _pollTimer;
+  List<LatLng> _routePoints = [];
 
   @override
   void initState() {
     super.initState();
     _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _refreshRide());
-    WidgetsBinding.instance.addPostFrameCallback((_) => _connectChatBackground());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _connectChatBackground();
+      _fetchRoute();
+    });
   }
 
   void _connectChatBackground() {
@@ -31,6 +38,33 @@ class _DriverRideScreenState extends State<DriverRideScreen> {
     final userId = context.read<AuthProvider>().currentUser?.id;
     if (ride != null && userId != null) {
       context.read<ChatProvider>().connectBackground(ride.id, userId);
+    }
+  }
+
+  Future<void> _fetchRoute() async {
+    final ride = context.read<RideProvider>().activeRide;
+    if (ride == null) return;
+    if (ride.destinationLat == null || ride.destinationLng == null) return;
+
+    try {
+      final url =
+          'https://router.project-osrm.org/route/v1/driving/'
+          '${ride.pickupLng},${ride.pickupLat};'
+          '${ride.destinationLng},${ride.destinationLat}'
+          '?geometries=geojson&overview=full';
+
+      final response = await Dio().get(url);
+      final coords = response.data['routes'][0]['geometry']['coordinates'] as List;
+      final points = coords.map((c) => LatLng((c[1] as num).toDouble(), (c[0] as num).toDouble())).toList();
+      if (mounted) setState(() => _routePoints = points);
+    } catch (_) {
+      final ride = context.read<RideProvider>().activeRide;
+      if (ride != null && ride.destinationLat != null && mounted) {
+        setState(() => _routePoints = [
+          LatLng(ride.pickupLat, ride.pickupLng),
+          LatLng(ride.destinationLat!, ride.destinationLng!),
+        ]);
+      }
     }
   }
 
@@ -110,7 +144,67 @@ class _DriverRideScreenState extends State<DriverRideScreen> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: Image.asset('assets/images/fare-select.png', fit: BoxFit.cover),
+            child: ride != null
+                ? FlutterMap(
+                    options: MapOptions(
+                      initialCenter: ride.destinationLat != null && ride.destinationLng != null
+                          ? LatLng(
+                              (ride.pickupLat + ride.destinationLat!) / 2,
+                              (ride.pickupLng + ride.destinationLng!) / 2,
+                            )
+                          : LatLng(ride.pickupLat, ride.pickupLng),
+                      initialZoom: 13,
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+                        subdomains: const ['a', 'b', 'c', 'd'],
+                        userAgentPackageName: 'com.resqlink.mobile',
+                      ),
+                      if (_routePoints.length >= 2)
+                        PolylineLayer(
+                          polylines: [
+                            Polyline(
+                              points: _routePoints,
+                              color: const Color(0xFF1565C0),
+                              strokeWidth: 4,
+                            ),
+                          ],
+                        ),
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: LatLng(ride.pickupLat, ride.pickupLng),
+                            width: 48,
+                            height: 48,
+                            child: Container(
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 6)],
+                              ),
+                              child: const Center(
+                                child: Text('🚑', style: TextStyle(fontSize: 24)),
+                              ),
+                            ),
+                          ),
+                          if (ride.destinationLat != null && ride.destinationLng != null)
+                            Marker(
+                              point: LatLng(ride.destinationLat!, ride.destinationLng!),
+                              width: 40,
+                              height: 48,
+                              child: const Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.location_on, color: Color(0xFFD30000), size: 40),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  )
+                : Image.asset('assets/images/fare-select.png', fit: BoxFit.cover),
           ),
 
           Positioned(

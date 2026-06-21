@@ -2,6 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:dio/dio.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/ride_provider.dart';
 import '../providers/chat_provider.dart';
 import '../providers/auth_provider.dart';
@@ -18,6 +22,7 @@ class UserRideDetailsScreen extends StatefulWidget {
 class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
   Timer? _pollTimer;
   bool _ratingShown = false;
+  List<LatLng> _routePoints = [];
 
   @override
   void initState() {
@@ -25,7 +30,10 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
     _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       if (mounted) context.read<RideProvider>().refreshActiveRide();
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) => _connectChatBackground());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _connectChatBackground();
+      _fetchRoute();
+    });
   }
 
   void _connectChatBackground() {
@@ -33,6 +41,34 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
     final userId = context.read<AuthProvider>().currentUser?.id;
     if (ride != null && userId != null) {
       context.read<ChatProvider>().connectBackground(ride.id, userId);
+    }
+  }
+
+  Future<void> _fetchRoute() async {
+    final ride = context.read<RideProvider>().activeRide;
+    if (ride == null) return;
+    if (ride.destinationLat == null || ride.destinationLng == null) return;
+
+    try {
+      final url =
+          'https://router.project-osrm.org/route/v1/driving/'
+          '${ride.pickupLng},${ride.pickupLat};'
+          '${ride.destinationLng},${ride.destinationLat}'
+          '?geometries=geojson&overview=full';
+
+      final response = await Dio().get(url);
+      final coords = response.data['routes'][0]['geometry']['coordinates'] as List;
+      final points = coords.map((c) => LatLng((c[1] as num).toDouble(), (c[0] as num).toDouble())).toList();
+      if (mounted) setState(() => _routePoints = points);
+    } catch (_) {
+      // Fall back to straight line if routing fails
+      final ride = context.read<RideProvider>().activeRide;
+      if (ride != null && ride.destinationLat != null && mounted) {
+        setState(() => _routePoints = [
+          LatLng(ride.pickupLat, ride.pickupLng),
+          LatLng(ride.destinationLat!, ride.destinationLng!),
+        ]);
+      }
     }
   }
 
@@ -144,11 +180,64 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
             Expanded(
               child: Stack(
                 children: [
-                  Image.asset(
-                    'assets/images/ride-map.png',
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
+                  FlutterMap(
+                    options: MapOptions(
+                      initialCenter: ride.destinationLat != null && ride.destinationLng != null
+                          ? LatLng(
+                              (ride.pickupLat + ride.destinationLat!) / 2,
+                              (ride.pickupLng + ride.destinationLng!) / 2,
+                            )
+                          : LatLng(ride.pickupLat, ride.pickupLng),
+                      initialZoom: 13,
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+                        subdomains: const ['a', 'b', 'c', 'd'],
+                        userAgentPackageName: 'com.resqlink.mobile',
+                      ),
+                      if (_routePoints.length >= 2)
+                        PolylineLayer(
+                          polylines: [
+                            Polyline(
+                              points: _routePoints,
+                              color: const Color(0xFF1565C0),
+                              strokeWidth: 4,
+                            ),
+                          ],
+                        ),
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: LatLng(ride.pickupLat, ride.pickupLng),
+                            width: 48,
+                            height: 48,
+                            child: Container(
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 6)],
+                              ),
+                              child: const Center(
+                                child: Text('🚑', style: TextStyle(fontSize: 24)),
+                              ),
+                            ),
+                          ),
+                          if (ride.destinationLat != null && ride.destinationLng != null)
+                            Marker(
+                              point: LatLng(ride.destinationLat!, ride.destinationLng!),
+                              width: 40,
+                              height: 48,
+                              child: const Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.location_on, color: Color(0xFFD42C2C), size: 40),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
                   ),
                   Positioned(
                     top: 50,
@@ -176,30 +265,37 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
             ),
 
             Container(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 20, offset: const Offset(0, -10)),
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 24, offset: const Offset(0, -8)),
                 ],
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Drag handle
                   Container(
-                    width: 36,
+                    width: 40,
                     height: 4,
-                    margin: const EdgeInsets.only(bottom: 24),
-                    decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(10)),
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
                   ),
 
+                  // Driver + Ambulance row
                   Row(
                     children: [
-                      const CircleAvatar(
-                        radius: 24,
-                        backgroundColor: Color(0xFFF3F3F3),
-                        child: Icon(Icons.person, color: Colors.grey, size: 28),
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF5F5F5),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0xFFEEEEEE)),
+                        ),
+                        child: const Icon(Icons.person, color: Color(0xFF9E9E9E), size: 28),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -207,14 +303,15 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              ride.driverName ?? 'Driver',
-                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, fontFamily: 'Roboto'),
+                              ride.driverName ?? 'Finding driver...',
+                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, fontFamily: 'Roboto', color: Color(0xFF1A1A1A)),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
+                            const SizedBox(height: 2),
                             Text(
-                              ride.driverPhone ?? (ride.assignedDriverId != null ? 'Assigned' : 'Finding driver...'),
-                              style: TextStyle(color: Colors.grey[500], fontSize: 13),
+                              ride.driverPhone ?? (ride.assignedDriverId != null ? 'Assigned' : ''),
+                              style: const TextStyle(color: Color(0xFF9E9E9E), fontSize: 13),
                             ),
                           ],
                         ),
@@ -223,53 +320,85 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            ride.ambulanceRegistrationNumber ?? 'Unassigned',
-                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, fontFamily: 'Roboto'),
+                            ride.ambulanceRegistrationNumber ?? '—',
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, fontFamily: 'Roboto', color: Color(0xFF1A1A1A)),
                           ),
-                          Text(
-                            ride.ambulanceType == 'WITH_DOCTOR' ? 'With Consultant' : 'Basic Ambulance',
-                            style: TextStyle(color: Colors.grey[500], fontSize: 13),
+                          const SizedBox(height: 2),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: ride.ambulanceType == 'WITH_DOCTOR'
+                                  ? const Color(0xFFEDE7F6)
+                                  : const Color(0xFFE3F2FD),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              ride.ambulanceType == 'WITH_DOCTOR' ? 'With Consultant' : 'Basic',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: ride.ambulanceType == 'WITH_DOCTOR'
+                                    ? const Color(0xFF6A1B9A)
+                                    : const Color(0xFF1565C0),
+                              ),
+                            ),
                           ),
                         ],
                       ),
                     ],
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
+                  // Divider
+                  Divider(color: Colors.grey[100], height: 1),
+                  const SizedBox(height: 16),
+
+                  // ETA + Fare chips
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildInfoChip(Icons.timer_outlined, ride.formattedEta, 'ETA'),
-                      _buildInfoChip(Icons.attach_money, ride.formattedCost, 'Fare'),
+                      Expanded(child: _buildInfoChip(Icons.timer_outlined, ride.formattedEta, 'ETA')),
+                      const SizedBox(width: 12),
+                      Expanded(child: _buildInfoChip(Icons.payments_outlined, ride.formattedCost, 'Fare')),
                     ],
                   ),
 
                   const SizedBox(height: 16),
 
+                  // Cancel button
                   if (ride.isActive)
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
                         onPressed: _cancel,
-                        icon: const Icon(Icons.cancel_outlined, color: Colors.red),
-                        label: const Text('Cancel Ride', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                        icon: const Icon(Icons.cancel_outlined, color: Color(0xFFD42C2C), size: 18),
+                        label: const Text('Cancel Ride', style: TextStyle(color: Color(0xFFD42C2C), fontWeight: FontWeight.w600, fontSize: 14)),
                         style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.red),
+                          side: const BorderSide(color: Color(0xFFD42C2C), width: 1.2),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          backgroundColor: const Color(0xFFFFF5F5),
                         ),
                       ),
                     ),
 
-                  const SizedBox(height: 12),
+                  if (ride.isActive) const SizedBox(height: 14),
 
+                  // Action buttons row
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildActionCircle(Icons.phone),
-                      _buildChatCircle(),
-                      _buildActionCircle(Icons.close, onTap: () => Navigator.pushReplacementNamed(context, AppRoutes.home)),
+                      Expanded(child: _buildActionButton(Icons.phone_outlined, 'Call', const Color(0xFF1565C0), const Color(0xFFE3F2FD),
+                          onTap: () {
+                            final phone = ride.driverPhone;
+                            if (phone != null && phone.isNotEmpty) {
+                              launchUrl(Uri.parse('tel:$phone'));
+                            }
+                          })),
+                      const SizedBox(width: 10),
+                      Expanded(child: _buildChatButton(ride)),
+                      const SizedBox(width: 10),
+                      Expanded(child: _buildActionButton(Icons.home_outlined, 'Home', const Color(0xFF424242), const Color(0xFFF5F5F5),
+                          onTap: () => Navigator.pushReplacementNamed(context, AppRoutes.home))),
                     ],
                   ),
                 ],
@@ -295,64 +424,89 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
   }
 
   Widget _buildInfoChip(IconData icon, String value, String label) {
-    return Column(
-      children: [
-        Icon(icon, color: const Color(0xFFD42C2C), size: 22),
-        const SizedBox(height: 4),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        Text(label, style: TextStyle(color: Colors.grey[500], fontSize: 12)),
-      ],
-    );
-  }
-
-  Widget _buildActionCircle(IconData icon, {VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 56,
-        height: 56,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFFF0F0F0)),
-        ),
-        child: Icon(icon, color: Colors.black, size: 24),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F8F8),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFF0F0F0)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: const Color(0xFFD42C2C), size: 20),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(value, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: Color(0xFF1A1A1A))),
+              Text(label, style: const TextStyle(color: Color(0xFF9E9E9E), fontSize: 11)),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildChatCircle() {
-    final ride = context.read<RideProvider>().activeRide;
+  Widget _buildActionButton(IconData icon, String label, Color iconColor, Color bgColor, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: iconColor, size: 22),
+            const SizedBox(height: 4),
+            Text(label, style: TextStyle(color: iconColor, fontSize: 11, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChatButton(dynamic ride) {
     final unread = context.watch<ChatProvider>().unreadCount;
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        _buildActionCircle(Icons.chat_bubble_outline, onTap: ride != null ? () {
-          context.read<ChatProvider>().clearUnread();
-          Navigator.pushNamed(context, AppRoutes.chatScreen, arguments: {
-            'rideRequestId': ride.id,
-            'recipientId': ride.assignedDriverId ?? '',
-            'recipientName': ride.driverName ?? 'Driver',
-            'isGroup': ride.ambulanceType == 'WITH_DOCTOR',
-          });
-        } : null),
-        if (unread > 0)
-          Positioned(
-            top: -2,
-            right: -2,
-            child: Container(
-              width: 20,
-              height: 20,
-              decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-              child: Center(
-                child: Text(
-                  unread > 9 ? '9+' : '$unread',
-                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+    return SizedBox(
+      width: double.infinity,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          SizedBox(
+            width: double.infinity,
+            child: _buildActionButton(Icons.chat_rounded, 'Chat', const Color(0xFF2E7D32), const Color(0xFFE8F5E9),
+                onTap: () {
+                  context.read<ChatProvider>().clearUnread();
+                  Navigator.pushNamed(context, AppRoutes.chatScreen, arguments: {
+                    'rideRequestId': ride.id,
+                    'recipientId': ride.assignedDriverId ?? '',
+                    'recipientName': ride.driverName ?? 'Driver',
+                    'isGroup': ride.ambulanceType == 'WITH_DOCTOR',
+                  });
+                }),
+          ),
+          if (unread > 0)
+            Positioned(
+              top: -4,
+              right: -4,
+              child: Container(
+                width: 20,
+                height: 20,
+                decoration: const BoxDecoration(color: Color(0xFFD42C2C), shape: BoxShape.circle),
+                child: Center(
+                  child: Text(
+                    unread > 9 ? '9+' : '$unread',
+                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }

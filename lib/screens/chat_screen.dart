@@ -30,6 +30,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessageModel> _messages = [];
+  final Set<String> _messageIds = {};
   bool _isLoading = false;
   bool _isSending = false;
   bool _isSocketConnected = false;
@@ -63,7 +64,8 @@ class _ChatScreenState extends State<ChatScreen> {
       SocketService.onNewMessage((data) {
         if (!mounted) return;
         final message = ChatMessageModel.fromJson(data);
-        if (_messages.any((m) => m.id == message.id)) return;
+        if (_messageIds.contains(message.id)) return;
+        _messageIds.add(message.id);
         setState(() => _messages.add(message));
         _scrollToBottom();
       });
@@ -77,14 +79,11 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       final messages = await ChatApi.getRideMessages(widget.rideRequestId);
       if (!mounted) return;
-      // Replace list only if something actually changed (by ID set comparison)
-      final existingIds = _messages.map((m) => m.id).toSet();
-      final fetchedIds = messages.map((m) => m.id).toSet();
-      if (!existingIds.containsAll(fetchedIds) || !fetchedIds.containsAll(existingIds)) {
-        setState(() {
-          _messages.clear();
-          _messages.addAll(messages);
-        });
+      // Only add messages we haven't seen yet — never clear the list
+      final newMessages = messages.where((m) => !_messageIds.contains(m.id)).toList();
+      if (newMessages.isNotEmpty) {
+        for (final m in newMessages) _messageIds.add(m.id);
+        setState(() => _messages.addAll(newMessages));
         _scrollToBottom();
       }
     } catch (_) {}
@@ -118,6 +117,8 @@ class _ChatScreenState extends State<ChatScreen> {
       if (mounted) {
         setState(() {
           _messages.clear();
+          _messageIds.clear();
+          for (final m in messages) _messageIds.add(m.id);
           _messages.addAll(messages);
         });
         _scrollToBottom();
@@ -140,14 +141,9 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() => _isSending = true);
 
     try {
-      final sentMessage = await ChatApi.sendMessage(
-          widget.rideRequestId, message, widget.recipientId);
-      if (mounted) {
-        setState(() => _messages.add(sentMessage));
-        _scrollToBottom();
-      }
-
-      // WebSocket broadcast is handled by the backend after REST save — no double-emit needed
+      // Save via REST — backend broadcasts via WebSocket, which adds it to _messages.
+      // Do NOT add locally here to avoid the duplicate (REST response + WS event).
+      await ChatApi.sendMessage(widget.rideRequestId, message, widget.recipientId);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

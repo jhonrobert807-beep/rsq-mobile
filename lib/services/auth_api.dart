@@ -38,10 +38,13 @@ class AuthApi {
   }
 
   static Future<Map<String, dynamic>> googleLogin({
-    required String idToken,
+    String? idToken,
+    String? accessToken,
     String? role,
   }) async {
-    final data = <String, dynamic>{'idToken': idToken};
+    final data = <String, dynamic>{};
+    if (idToken != null) data['idToken'] = idToken;
+    if (accessToken != null) data['accessToken'] = accessToken;
     if (role != null && role.isNotEmpty) data['role'] = role;
     return await ApiService.post(ApiConstants.googleLogin, data: data);
   }

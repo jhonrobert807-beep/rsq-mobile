@@ -82,14 +82,18 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    final idToken = await GoogleSignInService.getIdToken();
-    if (idToken == null) {
-      _showError('Failed to get Google ID token');
+    final tokenResult = await GoogleSignInService.getToken();
+    if (tokenResult == null) {
+      _showError('Failed to get Google token');
       return;
     }
 
     if (!mounted) return;
-    final error = await context.read<AuthProvider>().googleLogin(idToken: idToken, role: _role);
+    final error = await context.read<AuthProvider>().googleLogin(
+      idToken: tokenResult.isAccessToken ? null : tokenResult.token,
+      accessToken: tokenResult.isAccessToken ? tokenResult.token : null,
+      role: _role,
+    );
 
     if (!mounted) return;
     if (error != null) {

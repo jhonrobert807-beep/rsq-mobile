@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../routes/app_routes.dart';
 import '../../services/driver_api.dart';
+import '../../services/api_service.dart';
+import '../../core/constants/api_constants.dart';
 
 class EditDriverProfileScreen extends StatefulWidget {
   const EditDriverProfileScreen({super.key});
@@ -80,27 +82,18 @@ class _EditDriverProfileScreenState extends State<EditDriverProfileScreen> {
     final gender = _genderController.text.trim();
     final country = _countryController.text.trim();
 
+    final phone = _phoneController.text.trim();
+
     setState(() => _isLoading = true);
     try {
-      late String profileId;
-
-      // Try to get existing driver profile
-      try {
-        final driverProfile = await DriverApi.getProfileByUserId(userId);
-        profileId = driverProfile.id;
-      } catch (e) {
-        // Profile doesn't exist, create one
-        final newProfile = await DriverApi.createProfile(
-          userId: userId,
-          licenseNumber: '',
-          vehicleType: vehicleType,
-        );
-        profileId = newProfile.id;
+      // Save phone to user record
+      if (phone.isNotEmpty) {
+        await ApiService.patch('${ApiConstants.users}/$userId', data: {'phone': phone});
       }
 
       // Update driver profile with vehicle details
       await DriverApi.updateProfile(
-        profileId,
+        '',
         vehicleOwner: vehicleOwner.isNotEmpty ? vehicleOwner : null,
         vehicleRegistrationNumber: registrationNumber.isNotEmpty ? registrationNumber : null,
         vehicleType: vehicleType.isNotEmpty ? vehicleType : null,

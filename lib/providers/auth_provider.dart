@@ -61,10 +61,10 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<String?> googleLogin({required String idToken, String? role}) async {
+  Future<String?> googleLogin({String? idToken, String? accessToken, String? role}) async {
     _setLoading(true);
     try {
-      final result = await AuthApi.googleLogin(idToken: idToken, role: role);
+      final result = await AuthApi.googleLogin(idToken: idToken, accessToken: accessToken, role: role);
       await _saveSession(result);
       return null;
     } on AppException catch (e) {

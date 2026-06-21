@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
 
 class GoogleSignInService {
@@ -24,14 +25,21 @@ class GoogleSignInService {
     }
   }
 
-  static Future<String?> getIdToken() async {
+  /// Returns idToken on mobile, accessToken on web (idToken unavailable on web).
+  static Future<({String token, bool isAccessToken})?> getToken() async {
     try {
       final account = _googleSignIn.currentUser;
       if (account == null) return null;
       final auth = await account.authentication;
-      return auth.idToken;
+      if (!kIsWeb && auth.idToken != null) {
+        return (token: auth.idToken!, isAccessToken: false);
+      }
+      if (auth.accessToken != null) {
+        return (token: auth.accessToken!, isAccessToken: true);
+      }
+      return null;
     } catch (error) {
-      print('Error getting ID token: $error');
+      print('Error getting Google token: $error');
       return null;
     }
   }

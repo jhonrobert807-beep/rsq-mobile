@@ -71,7 +71,8 @@ class DriverApi {
       if (vehicleCity != null) data['vehicleCity'] = vehicleCity;
       if (gender != null) data['gender'] = gender;
       if (country != null) data['country'] = country;
-      final result = await ApiService.patch('${ApiConstants.driverProfiles}/$id', data: data);
+      // Use /me endpoint so driver can update their own profile without ADMIN role
+      final result = await ApiService.patch('${ApiConstants.driverProfiles}/me', data: data);
       return DriverProfileModel.fromJson(result);
     } catch (e) {
       throw AppException('Failed to update driver profile: ${e.toString()}');

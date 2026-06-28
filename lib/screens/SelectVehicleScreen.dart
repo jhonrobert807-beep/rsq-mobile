@@ -219,7 +219,7 @@ class _SelectVehicleScreenState extends State<SelectVehicleScreen> {
                                       elevation: 0,
                                     ),
                                     child: const Text(
-                                      'Confirm Booking',
+                                      'Select',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'Roboto'),
                                     ),

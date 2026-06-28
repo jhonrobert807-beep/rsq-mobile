@@ -20,6 +20,7 @@ import 'package:resqlink_mobile/screens/paramedic/paramedic_home_screen.dart';
 import 'package:resqlink_mobile/screens/paramedic/paramedic_profile_screen.dart';
 import 'package:resqlink_mobile/screens/payment/add_card_screen.dart';
 import 'package:resqlink_mobile/screens/payment/card_flow_screen.dart';
+import 'package:resqlink_mobile/screens/payment/payment_screen.dart';
 import 'package:resqlink_mobile/screens/privacy_policy_screen.dart';
 import 'package:resqlink_mobile/screens/select_payment_method_screen.dart';
 import 'package:resqlink_mobile/screens/select_route_screen.dart';
@@ -54,6 +55,7 @@ class AppRoutes {
   static const String bookingHistoryScreen = '/booking_history';
   static const String addCardScreen = '/add_card_screen';
   static const String cardFlowScreen = '/card_flow_screen';
+  static const String paymentScreen = '/payment_screen';
   static const String chatScreen = '/chat_screen';
   static const String login = '/login';
   static const String signup = '/signup';
@@ -93,6 +95,7 @@ class AppRoutes {
       bookingHistoryScreen: (context) => const BookingHistoryScreen(),
       addCardScreen: (context) => const AddCardScreen(),
       cardFlowScreen: (context) => const CardFlowScreen(),
+      paymentScreen: (context) => const PaymentScreen(),
       chatScreen: (context) {
         final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
         return ChatScreen(

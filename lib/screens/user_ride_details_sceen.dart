@@ -365,6 +365,25 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
 
                   const SizedBox(height: 16),
 
+                  // Pay Now button — shown when ride is completed and payment pending
+                  if (ride.isCompleted && ride.paymentStatus == 'PENDING')
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => Navigator.pushNamed(context, AppRoutes.paymentScreen),
+                        icon: const Icon(Icons.currency_rupee, color: Colors.white, size: 18),
+                        label: const Text('Pay Now', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFD42C2C),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
+
+                  if (ride.isCompleted && ride.paymentStatus == 'PENDING') const SizedBox(height: 14),
+
                   // Cancel button
                   if (ride.isActive)
                     SizedBox(

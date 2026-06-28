@@ -20,6 +20,7 @@ class DriverRideScreen extends StatefulWidget {
 
 class _DriverRideScreenState extends State<DriverRideScreen> {
   bool _isEnding = false;
+  bool _isStarting = false;
   Timer? _pollTimer;
   List<LatLng> _routePoints = [];
 
@@ -82,6 +83,27 @@ class _DriverRideScreenState extends State<DriverRideScreen> {
       final updated = await RideApi.getRide(ride.id);
       if (mounted) context.read<RideProvider>().setActiveRide(updated);
     } catch (_) {}
+  }
+
+  Future<void> _startRide() async {
+    final ride = context.read<RideProvider>().activeRide;
+    if (ride == null) return;
+    setState(() => _isStarting = true);
+    try {
+      await RideApi.updateStatus(ride.id, 'IN_TRIP');
+      if (mounted) {
+        final updated = await RideApi.getRide(ride.id);
+        context.read<RideProvider>().setActiveRide(updated);
+        setState(() => _isStarting = false);
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to start ride. Try again.'), backgroundColor: Colors.red),
+        );
+        setState(() => _isStarting = false);
+      }
+    }
   }
 
   Future<void> _endRide() async {
@@ -247,7 +269,7 @@ class _DriverRideScreenState extends State<DriverRideScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildInfoChip(Icons.timer_outlined, etaLabel, 'ETA'),
-                _buildInfoChip(Icons.attach_money, fareLabel, 'Fare'),
+                _buildInfoChip(Icons.currency_rupee, fareLabel, 'Fare'),
               ],
             ),
           ),
@@ -306,18 +328,31 @@ class _DriverRideScreenState extends State<DriverRideScreen> {
             child: SizedBox(
               width: double.infinity,
               height: 56,
-              child: ElevatedButton(
-                onPressed: _isEnding ? null : _endRide,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFD30000),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 2,
-                ),
-                child: _isEnding
-                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : const Text('End Ride', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-              ),
+              child: ride?.status == 'IN_TRIP'
+                  ? ElevatedButton(
+                      onPressed: _isEnding ? null : _endRide,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFD30000),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 2,
+                      ),
+                      child: _isEnding
+                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : const Text('End Ride', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                    )
+                  : ElevatedButton(
+                      onPressed: _isStarting ? null : _startRide,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2E7D32),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 2,
+                      ),
+                      child: _isStarting
+                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : const Text('Start Ride', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                    ),
             ),
           ),
         ],

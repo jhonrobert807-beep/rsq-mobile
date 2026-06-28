@@ -147,11 +147,22 @@ class UserProfileScreen extends StatelessWidget {
 
             // Section 2: General Info Card
             _buildProfileCard([
-              _buildListTile(Icons.account_box_outlined, 'Edit profile information'),
+              _buildListTile(Icons.account_box_outlined, 'Edit profile information', onTap: () => Navigator.pushReplacementNamed(context, AppRoutes.editProfile)),
               const Divider(height: 1),
-              _buildListTile(Icons.notifications_none_outlined, 'Notifications', trailing: 'ON'),
+              _buildListTile(Icons.notifications_none_outlined, 'Notifications', trailing: 'ON', onTap: () => Navigator.pushReplacementNamed(context, AppRoutes.notificationsSetting)),
               const Divider(height: 1),
-              _buildListTile(Icons.translate, 'Language', trailing: 'English'),
+              _buildListTile(Icons.translate, 'Language', trailing: 'English', onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => SimpleDialog(
+                    title: const Text('Select Language'),
+                    children: [
+                      SimpleDialogOption(child: const Text('English'), onPressed: () => Navigator.pop(ctx)),
+                      SimpleDialogOption(child: const Text('اردو (Urdu)'), onPressed: () => Navigator.pop(ctx)),
+                    ],
+                  ),
+                );
+              }),
             ]),
 
             // Section 3: Vehicle & Theme Card
@@ -161,16 +172,27 @@ class UserProfileScreen extends StatelessWidget {
                 child: Text('Vehicle Details', style: TextStyle(color: Colors.black87, fontSize: 14)),
               ),
               const Divider(height: 1),
-              _buildListTile(Icons.face_retouching_natural_outlined, 'Theme', trailing: 'Light mode'),
+              _buildListTile(Icons.face_retouching_natural_outlined, 'Theme', trailing: 'Light mode', onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => SimpleDialog(
+                    title: const Text('Select Theme'),
+                    children: [
+                      SimpleDialogOption(child: const Text('Light mode'), onPressed: () => Navigator.pop(ctx)),
+                      SimpleDialogOption(child: const Text('Dark mode'), onPressed: () => Navigator.pop(ctx)),
+                    ],
+                  ),
+                );
+              }),
             ]),
 
             // Section 4: Support Card
             _buildProfileCard([
-              _buildListTile(Icons.people_outline, 'Help & Support'),
+              _buildListTile(Icons.people_outline, 'Help & Support', onTap: () {}),
               const Divider(height: 1),
-              _buildListTile(Icons.chat_bubble_outline, 'Contact us'),
+              _buildListTile(Icons.chat_bubble_outline, 'Contact us', onTap: () {}),
               const Divider(height: 1),
-              _buildListTile(Icons.lock_outline, 'Privacy policy'),
+              _buildListTile(Icons.lock_outline, 'Privacy policy', onTap: () {}),
             ]),
             const SizedBox(height: 20),
           ],
@@ -231,17 +253,23 @@ class UserProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildListTile(IconData icon, String title, {String? trailing}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.black87, size: 22),
-          const SizedBox(width: 15),
-          Expanded(child: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w400))),
-          if (trailing != null)
-            Text(trailing, style: const TextStyle(color: Color(0xFF2196F3), fontWeight: FontWeight.w600, fontSize: 14)),
-        ],
+  Widget _buildListTile(IconData icon, String title, {String? trailing, VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.black87, size: 22),
+            const SizedBox(width: 15),
+            Expanded(child: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w400))),
+            if (trailing != null)
+              Text(trailing, style: const TextStyle(color: Color(0xFF2196F3), fontWeight: FontWeight.w600, fontSize: 14)),
+            if (onTap != null)
+              const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
+          ],
+        ),
       ),
     );
   }

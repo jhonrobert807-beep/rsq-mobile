@@ -161,7 +161,7 @@ class _SelectPaymentMethodScreenState extends State<SelectPaymentMethodScreen> {
                   ),
                   child: isLoading
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Text('Booking', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'Roboto')),
+                      : const Text('Confirm Payment Method', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'Roboto')),
                 ),
               ),
             ],

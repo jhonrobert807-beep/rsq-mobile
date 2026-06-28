@@ -43,13 +43,14 @@ class _NotificationsSettingsScreenState extends State<NotificationsSettingsScree
       setState(() => _isLoading = true);
       final prefs = await NotificationApi.getPreferences(userId);
 
+      final p = prefs['preferences'] as Map? ?? prefs;
       setState(() {
         _settings = {
-          'rideUpdates': prefs['rideUpdates'] as bool? ?? true,
-          'promotions': prefs['promotions'] as bool? ?? false,
-          'safetyAlerts': prefs['safetyAlerts'] as bool? ?? true,
-          'paymentReminders': prefs['paymentReminders'] as bool? ?? true,
-          'systemNotifications': prefs['systemNotifications'] as bool? ?? true,
+          'rideUpdates': p['rideUpdates'] as bool? ?? true,
+          'promotions': p['promotions'] as bool? ?? false,
+          'safetyAlerts': p['safetyAlerts'] as bool? ?? true,
+          'paymentReminders': p['paymentReminders'] as bool? ?? true,
+          'systemNotifications': p['systemNotifications'] as bool? ?? true,
         };
         _isLoading = false;
         _errorMessage = null;

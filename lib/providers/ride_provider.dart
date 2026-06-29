@@ -142,7 +142,8 @@ class RideProvider extends ChangeNotifier {
           updated.assignedDriverId != _activeRide!.assignedDriverId ||
           updated.driverName != _activeRide!.driverName ||
           updated.etaMinutes != _activeRide!.etaMinutes ||
-          updated.cost != _activeRide!.cost) {
+          updated.cost != _activeRide!.cost ||
+          updated.paymentStatus != _activeRide!.paymentStatus) {
         _activeRide = updated;
         notifyListeners();
       }

@@ -27,7 +27,7 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (mounted) context.read<RideProvider>().refreshActiveRide();
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {

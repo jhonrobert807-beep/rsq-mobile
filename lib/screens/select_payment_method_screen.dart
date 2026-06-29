@@ -21,10 +21,13 @@ class _SelectPaymentMethodScreenState extends State<SelectPaymentMethodScreen> {
   bool _initialized = false;
 
   static const _paymentMethods = [
-    {'label': 'Visa', 'detail': '1024', 'asset': 'assets/images/visa.png', 'method': 'CARD'},
-    {'label': 'MasterCard', 'detail': '4223', 'asset': 'assets/images/mastercard.png', 'method': 'CARD'},
-    {'label': 'Bank Transfer', 'detail': '', 'asset': null, 'method': 'WALLET'},
-    {'label': 'PayPak', 'detail': '', 'asset': 'assets/images/paypak.png', 'method': 'CASH'},
+    {'label': 'Cash', 'detail': 'Pay on delivery', 'asset': null, 'method': 'CASH', 'icon': Icons.money},
+    {'label': 'JazzCash', 'detail': '', 'asset': null, 'method': 'WALLET', 'icon': Icons.phone_android},
+    {'label': 'EasyPaisa', 'detail': '', 'asset': null, 'method': 'WALLET', 'icon': Icons.account_balance_wallet},
+    {'label': 'Visa', 'detail': '1024', 'asset': 'assets/images/visa.png', 'method': 'CARD', 'icon': null},
+    {'label': 'MasterCard', 'detail': '4223', 'asset': 'assets/images/mastercard.png', 'method': 'CARD', 'icon': null},
+    {'label': 'Bank Transfer', 'detail': '', 'asset': null, 'method': 'WALLET', 'icon': Icons.account_balance},
+    {'label': 'PayPak', 'detail': '', 'asset': 'assets/images/paypak.png', 'method': 'CASH', 'icon': null},
   ];
 
   @override
@@ -44,6 +47,9 @@ class _SelectPaymentMethodScreenState extends State<SelectPaymentMethodScreen> {
   }
 
   Future<void> _book() async {
+    final selectedLabel = _paymentMethods[_selectedPayment]['label'] as String;
+    context.read<RideProvider>().setPaymentMethod(selectedLabel);
+
     final error = await context.read<RideProvider>().createRide(
       ambulanceType: _ambulanceType,
       pickupLat: _pickupLat,
@@ -119,8 +125,8 @@ class _SelectPaymentMethodScreenState extends State<SelectPaymentMethodScreen> {
                       child: Row(
                         children: [
                           pm['asset'] != null
-                              ? Image.asset(pm['asset']!, width: 32, height: 24)
-                              : Icon(Icons.account_balance, color: Colors.grey[600], size: 24),
+                              ? Image.asset(pm['asset']! as String, width: 32, height: 24)
+                              : Icon(pm['icon'] as IconData? ?? Icons.payment, color: Colors.grey[600], size: 24),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(

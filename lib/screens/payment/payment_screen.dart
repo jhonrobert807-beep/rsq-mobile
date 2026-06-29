@@ -18,12 +18,30 @@ class _PaymentScreenState extends State<PaymentScreen> {
   bool _isProcessing = false;
   bool _isSuccess = false;
   String _transactionId = '';
+  bool _initialized = false;
 
   static const _methods = [
     {'label': 'Cash', 'icon': Icons.money, 'color': Color(0xFF2E7D32)},
     {'label': 'JazzCash', 'icon': Icons.phone_android, 'color': Color(0xFFE53935)},
     {'label': 'EasyPaisa', 'icon': Icons.account_balance_wallet, 'color': Color(0xFF00897B)},
+    {'label': 'Visa', 'icon': Icons.credit_card, 'color': Color(0xFF1A237E)},
+    {'label': 'MasterCard', 'icon': Icons.credit_card, 'color': Color(0xFFB71C1C)},
+    {'label': 'Bank Transfer', 'icon': Icons.account_balance, 'color': Color(0xFF37474F)},
+    {'label': 'PayPak', 'icon': Icons.credit_card, 'color': Color(0xFF1B5E20)},
   ];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      final saved = context.read<RideProvider>().selectedPaymentMethod;
+      if (saved != null) {
+        final idx = _methods.indexWhere((m) => m['label'] == saved);
+        if (idx != -1) _selectedIndex = idx;
+      }
+      _initialized = true;
+    }
+  }
 
   String _generateTxnId() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';

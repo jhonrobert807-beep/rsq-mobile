@@ -149,7 +149,14 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
       ),
     );
 
-    if (mounted) Navigator.pushReplacementNamed(context, AppRoutes.home);
+    if (!mounted) return;
+    final currentRide = context.read<RideProvider>().activeRide;
+    if (currentRide?.paymentStatus == 'PENDING') {
+      // Stay on screen so Pay Now button is visible
+      setState(() {});
+    } else {
+      Navigator.pushReplacementNamed(context, AppRoutes.home);
+    }
   }
 
   @override
@@ -359,7 +366,7 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
                     children: [
                       Expanded(child: _buildInfoChip(Icons.timer_outlined, ride.formattedEta, 'ETA')),
                       const SizedBox(width: 12),
-                      Expanded(child: _buildInfoChip(Icons.payments_outlined, ride.formattedCost, 'Fare')),
+                      Expanded(child: _buildInfoChip(Icons.currency_rupee, ride.formattedCost, 'Fare')),
                     ],
                   ),
 

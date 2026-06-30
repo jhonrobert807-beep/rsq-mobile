@@ -27,13 +27,41 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (mounted) context.read<RideProvider>().refreshActiveRide();
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      if (!mounted) return;
+      final ride = context.read<RideProvider>().activeRide;
+      if (ride == null) return;
+      if (ride.isCompleted) {
+        _pollTimer?.cancel();
+        _pollTimer = null;
+        _onRideCompleted(ride.id);
+        return;
+      }
+      await context.read<RideProvider>().refreshActiveRide();
+      if (!mounted) return;
+      final updated = context.read<RideProvider>().activeRide;
+      if (updated != null && updated.isCompleted) {
+        _pollTimer?.cancel();
+        _pollTimer = null;
+        _onRideCompleted(updated.id);
+      }
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _connectChatBackground();
       _fetchRoute();
+      // Handle case where ride is already completed when screen opens
+      final ride = context.read<RideProvider>().activeRide;
+      if (ride != null && ride.isCompleted) {
+        _pollTimer?.cancel();
+        _pollTimer = null;
+        _onRideCompleted(ride.id);
+      }
     });
+  }
+
+  void _onRideCompleted(String rideId) {
+    if (!mounted || _ratingShown) return;
+    _showRatingDialog(rideId);
   }
 
   void _connectChatBackground() {
@@ -150,13 +178,11 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
     );
 
     if (!mounted) return;
-    // Refresh so userRating is populated — prevents dialog re-trigger
-    await context.read<RideProvider>().refreshActiveRide();
-    if (!mounted) return;
     final currentRide = context.read<RideProvider>().activeRide;
     if (currentRide?.paymentStatus == 'PENDING') {
-      setState(() {});
+      // Stay on screen to show Pay Now button — no rebuild needed, widget already shows it
     } else {
+      context.read<RideProvider>().clearActiveRide();
       Navigator.pushReplacementNamed(context, AppRoutes.home);
     }
   }
@@ -173,15 +199,6 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator(color: Color(0xFFD42C2C))),
       );
-    }
-
-    // Stop polling and trigger rating dialog when ride is completed
-    if (ride.isCompleted) {
-      _pollTimer?.cancel();
-      _pollTimer = null;
-      if (ride.userRating == null && !_ratingShown) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => _showRatingDialog(ride.id));
-      }
     }
 
     return Scaffold(

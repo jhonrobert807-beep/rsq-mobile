@@ -261,131 +261,141 @@ class _DriverRideScreenState extends State<DriverRideScreen> {
             ),
           ),
 
-          if (ride?.ambulanceType == 'WITH_DOCTOR' && ride?.paramedicName != null)
-            Positioned(
-              bottom: 185,
-              left: 20,
-              right: 20,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8F5E9),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF2E7D32).withOpacity(0.3)),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 6)],
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.medical_services, color: Color(0xFF2E7D32), size: 22),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 16, offset: const Offset(0, -4))],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (ride?.ambulanceType == 'WITH_DOCTOR' && ride?.paramedicName != null) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F5E9),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF2E7D32).withOpacity(0.25)),
+                      ),
+                      child: Row(
                         children: [
-                          const Text('Paramedic Partner', style: TextStyle(fontSize: 11, color: Color(0xFF2E7D32), fontWeight: FontWeight.w600)),
-                          Text(ride!.paramedicName!, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                          if (ride.paramedicPhone != null)
-                            Text(ride.paramedicPhone!, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                          const Icon(Icons.medical_services, color: Color(0xFF2E7D32), size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Paramedic Partner', style: TextStyle(fontSize: 10, color: Color(0xFF2E7D32), fontWeight: FontWeight.w600)),
+                                Text(ride!.paramedicName!, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                                if (ride.paramedicPhone != null)
+                                  Text(ride.paramedicPhone!, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
+                    const SizedBox(height: 12),
                   ],
-                ),
-              ),
-            ),
 
-          Positioned(
-            bottom: 120,
-            left: 20,
-            right: 20,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildInfoChip(Icons.timer_outlined, etaLabel, 'ETA'),
-                _buildInfoChip(Icons.payments_outlined, fareLabel, 'Fare', iconText: 'Rs'),
-              ],
-            ),
-          ),
-
-          Positioned(
-            bottom: 110,
-            right: 20,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                FloatingActionButton(
-                  mini: true,
-                  backgroundColor: Colors.white,
-                  onPressed: () {
-                    final ride = context.read<RideProvider>().activeRide;
-                    if (ride != null) {
-                      context.read<ChatProvider>().clearUnread();
-                      Navigator.pushNamed(context, AppRoutes.chatScreen, arguments: {
-                        'rideRequestId': ride.id,
-                        'recipientId': ride.userId,
-                        'recipientName': ride.patientName ?? 'Patient',
-                        'isGroup': ride.ambulanceType == 'WITH_DOCTOR',
-                      });
-                    }
-                  },
-                  child: const Icon(Icons.chat_bubble_outline, color: Color(0xFFD30000)),
-                ),
-                Consumer<ChatProvider>(
-                  builder: (_, chat, __) {
-                    if (chat.unreadCount == 0) return const SizedBox.shrink();
-                    return Positioned(
-                      top: -4,
-                      right: -4,
-                      child: Container(
-                        width: 18,
-                        height: 18,
-                        decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                        child: Center(
-                          child: Text(
-                            chat.unreadCount > 9 ? '9+' : '${chat.unreadCount}',
-                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                  Row(
+                    children: [
+                      Expanded(child: _buildInfoChip(Icons.timer_outlined, etaLabel, 'ETA')),
+                      const SizedBox(width: 12),
+                      Expanded(child: _buildInfoChip(Icons.payments_outlined, fareLabel, 'Fare', iconText: 'Rs')),
+                      const SizedBox(width: 12),
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade200),
+                              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 4)],
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.chat_bubble_outline, color: Color(0xFFD30000), size: 22),
+                              onPressed: () {
+                                final r = context.read<RideProvider>().activeRide;
+                                if (r != null) {
+                                  context.read<ChatProvider>().clearUnread();
+                                  Navigator.pushNamed(context, AppRoutes.chatScreen, arguments: {
+                                    'rideRequestId': r.id,
+                                    'recipientId': r.userId,
+                                    'recipientName': r.patientName ?? 'Patient',
+                                    'isGroup': r.ambulanceType == 'WITH_DOCTOR',
+                                  });
+                                }
+                              },
+                            ),
                           ),
-                        ),
+                          Consumer<ChatProvider>(
+                            builder: (_, chat, __) {
+                              if (chat.unreadCount == 0) return const SizedBox.shrink();
+                              return Positioned(
+                                top: -4,
+                                right: -4,
+                                child: Container(
+                                  width: 18,
+                                  height: 18,
+                                  decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                                  child: Center(
+                                    child: Text(
+                                      chat.unreadCount > 9 ? '9+' : '${chat.unreadCount}',
+                                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
+                    ],
+                  ),
 
-          Positioned(
-            bottom: 40,
-            left: 20,
-            right: 20,
-            child: SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ride?.status == 'IN_TRIP'
-                  ? ElevatedButton(
-                      onPressed: _isEnding ? null : _endRide,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFD30000),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 2,
-                      ),
-                      child: _isEnding
-                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Text('End Ride', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-                    )
-                  : ElevatedButton(
-                      onPressed: _isStarting ? null : _startRide,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2E7D32),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 2,
-                      ),
-                      child: _isStarting
-                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Text('Start Ride', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-                    ),
+                  const SizedBox(height: 12),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ride?.status == 'IN_TRIP'
+                        ? ElevatedButton(
+                            onPressed: _isEnding ? null : _endRide,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFD30000),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 2,
+                            ),
+                            child: _isEnding
+                                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                : const Text('End Ride', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                          )
+                        : ElevatedButton(
+                            onPressed: _isStarting ? null : _startRide,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF2E7D32),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 2,
+                            ),
+                            child: _isStarting
+                                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                : const Text('Start Ride', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                          ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -405,16 +415,21 @@ class _DriverRideScreenState extends State<DriverRideScreen> {
 
   Widget _buildInfoChip(IconData icon, String value, String label, {String? iconText}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 6)]),
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           iconText != null
-              ? Text(iconText, style: const TextStyle(color: Color(0xFFD30000), fontSize: 15, fontWeight: FontWeight.bold))
-              : Icon(icon, color: const Color(0xFFD30000), size: 20),
-          const SizedBox(height: 4),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-          Text(label, style: TextStyle(color: Colors.grey[500], fontSize: 11)),
+              ? Text(iconText, style: const TextStyle(color: Color(0xFFD30000), fontSize: 14, fontWeight: FontWeight.bold))
+              : Icon(icon, color: const Color(0xFFD30000), size: 18),
+          const SizedBox(height: 3),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          Text(label, style: TextStyle(color: Colors.grey[500], fontSize: 10)),
         ],
       ),
     );

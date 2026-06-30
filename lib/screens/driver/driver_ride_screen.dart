@@ -261,6 +261,39 @@ class _DriverRideScreenState extends State<DriverRideScreen> {
             ),
           ),
 
+          if (ride?.ambulanceType == 'WITH_DOCTOR' && ride?.paramedicName != null)
+            Positioned(
+              bottom: 185,
+              left: 20,
+              right: 20,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F5E9),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF2E7D32).withOpacity(0.3)),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 6)],
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.medical_services, color: Color(0xFF2E7D32), size: 22),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Paramedic Partner', style: TextStyle(fontSize: 11, color: Color(0xFF2E7D32), fontWeight: FontWeight.w600)),
+                          Text(ride!.paramedicName!, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                          if (ride.paramedicPhone != null)
+                            Text(ride.paramedicPhone!, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
           Positioned(
             bottom: 120,
             left: 20,

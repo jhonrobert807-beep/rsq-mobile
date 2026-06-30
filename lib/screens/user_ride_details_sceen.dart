@@ -363,6 +363,41 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
 
                   const SizedBox(height: 16),
 
+                  // Paramedic card — only for WITH_DOCTOR rides
+                  if (ride.ambulanceType == 'WITH_DOCTOR' && ride.paramedicName != null) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F5E9),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF2E7D32).withOpacity(0.25)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: const BoxDecoration(color: Color(0xFF2E7D32), shape: BoxShape.circle),
+                            child: const Icon(Icons.medical_services, color: Colors.white, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Paramedic', style: TextStyle(fontSize: 11, color: Color(0xFF2E7D32), fontWeight: FontWeight.w600)),
+                                Text(ride.paramedicName!, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF1A1A1A))),
+                                if (ride.paramedicPhone != null)
+                                  Text(ride.paramedicPhone!, style: const TextStyle(fontSize: 12, color: Color(0xFF9E9E9E))),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
                   // Divider
                   Divider(color: Colors.grey[100], height: 1),
                   const SizedBox(height: 16),

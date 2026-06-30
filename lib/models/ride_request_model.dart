@@ -10,6 +10,9 @@ class RideRequestModel {
   final String? assignedDriverId;
   final String? driverName;
   final String? driverPhone;
+  final String? assignedParamedicId;
+  final String? paramedicName;
+  final String? paramedicPhone;
   final String? patientName;
   final String? ambulanceId;
   final String? ambulanceRegistrationNumber;
@@ -35,6 +38,9 @@ class RideRequestModel {
     this.assignedDriverId,
     this.driverName,
     this.driverPhone,
+    this.assignedParamedicId,
+    this.paramedicName,
+    this.paramedicPhone,
     this.patientName,
     this.ambulanceId,
     this.ambulanceRegistrationNumber,
@@ -61,6 +67,9 @@ class RideRequestModel {
         assignedDriverId: json['assignedDriverId'],
         driverName: json['assignedDriver']?['name'],
         driverPhone: json['assignedDriver']?['phone'],
+        assignedParamedicId: json['assignedParamedicId'],
+        paramedicName: json['assignedParamedic']?['name'],
+        paramedicPhone: json['assignedParamedic']?['phone'],
         patientName: json['user']?['name'],
         ambulanceId: json['ambulanceId'],
         ambulanceRegistrationNumber: json['ambulance']?['registrationNumber'],

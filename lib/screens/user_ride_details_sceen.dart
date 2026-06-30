@@ -150,9 +150,11 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
     );
 
     if (!mounted) return;
+    // Refresh so userRating is populated — prevents dialog re-trigger
+    await context.read<RideProvider>().refreshActiveRide();
+    if (!mounted) return;
     final currentRide = context.read<RideProvider>().activeRide;
     if (currentRide?.paymentStatus == 'PENDING') {
-      // Stay on screen so Pay Now button is visible
       setState(() {});
     } else {
       Navigator.pushReplacementNamed(context, AppRoutes.home);
@@ -173,9 +175,13 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
       );
     }
 
-    // Trigger rating dialog when ride is completed
-    if (ride.isCompleted && ride.userRating == null && !_ratingShown) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _showRatingDialog(ride.id));
+    // Stop polling and trigger rating dialog when ride is completed
+    if (ride.isCompleted) {
+      _pollTimer?.cancel();
+      _pollTimer = null;
+      if (ride.userRating == null && !_ratingShown) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _showRatingDialog(ride.id));
+      }
     }
 
     return Scaffold(
@@ -366,7 +372,7 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
                     children: [
                       Expanded(child: _buildInfoChip(Icons.timer_outlined, ride.formattedEta, 'ETA')),
                       const SizedBox(width: 12),
-                      Expanded(child: _buildInfoChip(Icons.currency_rupee, ride.formattedCost, 'Fare')),
+                      Expanded(child: _buildInfoChip(Icons.payments_outlined, ride.formattedCost, 'Fare', iconText: 'Rs')),
                     ],
                   ),
 
@@ -378,7 +384,7 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         onPressed: () => Navigator.pushNamed(context, AppRoutes.paymentScreen),
-                        icon: const Icon(Icons.currency_rupee, color: Colors.white, size: 18),
+                        icon: const Icon(Icons.payments_outlined, color: Colors.white, size: 18),
                         label: const Text('Pay Now', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFD42C2C),
@@ -449,7 +455,7 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
     );
   }
 
-  Widget _buildInfoChip(IconData icon, String value, String label) {
+  Widget _buildInfoChip(IconData icon, String value, String label, {String? iconText}) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
@@ -460,7 +466,9 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: const Color(0xFFD42C2C), size: 20),
+          iconText != null
+              ? Text(iconText, style: const TextStyle(color: Color(0xFFD42C2C), fontSize: 15, fontWeight: FontWeight.bold))
+              : Icon(icon, color: const Color(0xFFD42C2C), size: 20),
           const SizedBox(width: 8),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,

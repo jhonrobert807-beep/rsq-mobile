@@ -388,6 +388,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildActiveRideBanner(BuildContext context) {
     final ride = context.watch<RideProvider>().activeRide;
     if (ride == null) return const SizedBox.shrink();
+    if (ride.status == 'COMPLETED') return const SizedBox.shrink();
 
     final statusLabel = ride.status.replaceAll('_', ' ');
     return GestureDetector(

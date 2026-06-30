@@ -24,10 +24,8 @@ class _SelectPaymentMethodScreenState extends State<SelectPaymentMethodScreen> {
     {'label': 'Cash', 'detail': 'Pay on delivery', 'asset': null, 'method': 'CASH', 'icon': Icons.money},
     {'label': 'JazzCash', 'detail': '', 'asset': null, 'method': 'WALLET', 'icon': Icons.phone_android},
     {'label': 'EasyPaisa', 'detail': '', 'asset': null, 'method': 'WALLET', 'icon': Icons.account_balance_wallet},
-    {'label': 'Visa', 'detail': '1024', 'asset': 'assets/images/visa.png', 'method': 'CARD', 'icon': null},
-    {'label': 'MasterCard', 'detail': '4223', 'asset': 'assets/images/mastercard.png', 'method': 'CARD', 'icon': null},
+    {'label': 'Credit/Debit Card', 'detail': 'Visa, MasterCard accepted', 'asset': null, 'method': 'CARD', 'icon': Icons.credit_card},
     {'label': 'Bank Transfer', 'detail': '', 'asset': null, 'method': 'WALLET', 'icon': Icons.account_balance},
-    {'label': 'PayPak', 'detail': '', 'asset': 'assets/images/paypak.png', 'method': 'CASH', 'icon': null},
   ];
 
   @override
@@ -108,7 +106,10 @@ class _SelectPaymentMethodScreenState extends State<SelectPaymentMethodScreen> {
               ),
               const SizedBox(height: 24),
 
-              ...List.generate(_paymentMethods.length, (index) {
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: List.generate(_paymentMethods.length, (index) {
                 final pm = _paymentMethods[index];
                 final isSelected = _selectedPayment == index;
                 return Padding(
@@ -132,9 +133,9 @@ class _SelectPaymentMethodScreenState extends State<SelectPaymentMethodScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(pm['label']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, fontFamily: 'Roboto')),
-                                if (pm['detail']!.isNotEmpty)
-                                  Text(pm['detail']!, style: TextStyle(fontSize: 14, color: Colors.grey[600], fontFamily: 'Roboto')),
+                                Text(pm['label'] as String, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, fontFamily: 'Roboto')),
+                                if ((pm['detail'] as String).isNotEmpty)
+                                  Text(pm['detail'] as String, style: TextStyle(fontSize: 14, color: Colors.grey[600], fontFamily: 'Roboto')),
                               ],
                             ),
                           ),
@@ -154,15 +155,19 @@ class _SelectPaymentMethodScreenState extends State<SelectPaymentMethodScreen> {
                   ),
                 );
               }),
+                  ),
+                ),
+              ),
 
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
 
-              Center(
+              SizedBox(
+                width: double.infinity,
+                height: 52,
                 child: ElevatedButton(
                   onPressed: isLoading ? null : _book,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
-                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   child: isLoading
@@ -170,6 +175,7 @@ class _SelectPaymentMethodScreenState extends State<SelectPaymentMethodScreen> {
                       : const Text('Confirm Payment Method', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'Roboto')),
                 ),
               ),
+              const SizedBox(height: 16),
             ],
           ),
         ),

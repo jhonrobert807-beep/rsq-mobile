@@ -24,10 +24,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
     {'label': 'Cash', 'icon': Icons.money, 'color': Color(0xFF2E7D32)},
     {'label': 'JazzCash', 'icon': Icons.phone_android, 'color': Color(0xFFE53935)},
     {'label': 'EasyPaisa', 'icon': Icons.account_balance_wallet, 'color': Color(0xFF00897B)},
-    {'label': 'Visa', 'icon': Icons.credit_card, 'color': Color(0xFF1A237E)},
-    {'label': 'MasterCard', 'icon': Icons.credit_card, 'color': Color(0xFFB71C1C)},
+    {'label': 'Credit/Debit Card', 'icon': Icons.credit_card, 'color': Color(0xFF1A237E)},
     {'label': 'Bank Transfer', 'icon': Icons.account_balance, 'color': Color(0xFF37474F)},
-    {'label': 'PayPak', 'icon': Icons.credit_card, 'color': Color(0xFF1B5E20)},
   ];
 
   @override
@@ -60,7 +58,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     final txnId = _generateTxnId();
     final method = _methods[_selectedIndex]['label'] as String;
-    final apiMethod = method == 'Cash' ? 'CASH' : 'WALLET';
+    const apiMethodMap = {
+      'Cash': 'CASH',
+      'JazzCash': 'WALLET',
+      'EasyPaisa': 'WALLET',
+      'Credit/Debit Card': 'CARD',
+      'Bank Transfer': 'WALLET',
+    };
+    final apiMethod = apiMethodMap[method] ?? 'CASH';
 
     try {
       await RideApi.updatePayment(ride.id, paymentStatus: 'PAID', paymentMethod: apiMethod);
@@ -100,84 +105,93 @@ class _PaymentScreenState extends State<PaymentScreen> {
         title: const Text('Payment', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18)),
         centerTitle: true,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: double.infinity,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF5F5),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFFFCDD2)),
-              ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Total Amount', style: TextStyle(color: Colors.grey, fontSize: 13)),
-                  const SizedBox(height: 6),
-                  Text(fare, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFFD42C2C))),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF5F5),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFFFCDD2)),
+                    ),
+                    child: Column(
+                      children: [
+                        const Text('Total Amount', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                        const SizedBox(height: 6),
+                        Text(fare, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFFD42C2C))),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  const Text('Select Payment Method', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+                  ...List.generate(_methods.length, (i) {
+                    final m = _methods[i];
+                    final isSelected = _selectedIndex == i;
+                    return GestureDetector(
+                      onTap: () => setState(() => _selectedIndex = i),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: isSelected ? const Color(0xFFFFF5F5) : Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isSelected ? const Color(0xFFD42C2C) : Colors.grey.shade200,
+                            width: isSelected ? 2 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: (m['color'] as Color).withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(m['icon'] as IconData, color: m['color'] as Color, size: 22),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Text(m['label'] as String,
+                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                            ),
+                            Container(
+                              width: 22,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isSelected ? const Color(0xFFD42C2C) : Colors.transparent,
+                                border: Border.all(
+                                  color: isSelected ? const Color(0xFFD42C2C) : Colors.grey.shade300,
+                                  width: 2,
+                                ),
+                              ),
+                              child: isSelected
+                                  ? const Icon(Icons.check, color: Colors.white, size: 13)
+                                  : null,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
                 ],
               ),
             ),
-            const SizedBox(height: 28),
-            const Text('Select Payment Method', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            ...List.generate(_methods.length, (i) {
-              final m = _methods[i];
-              final isSelected = _selectedIndex == i;
-              return GestureDetector(
-                onTap: () => setState(() => _selectedIndex = i),
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFFFFF5F5) : Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: isSelected ? const Color(0xFFD42C2C) : Colors.grey.shade200,
-                      width: isSelected ? 2 : 1,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: (m['color'] as Color).withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(m['icon'] as IconData, color: m['color'] as Color, size: 22),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Text(m['label'] as String,
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                      ),
-                      Container(
-                        width: 22,
-                        height: 22,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isSelected ? const Color(0xFFD42C2C) : Colors.transparent,
-                          border: Border.all(
-                            color: isSelected ? const Color(0xFFD42C2C) : Colors.grey.shade300,
-                            width: 2,
-                          ),
-                        ),
-                        child: isSelected
-                            ? const Icon(Icons.check, color: Colors.white, size: 13)
-                            : null,
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
-            const Spacer(),
-            SizedBox(
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+            child: SizedBox(
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
@@ -191,15 +205,23 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
             ),
-            const SizedBox(height: 12),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildProcessingScreen() {
-    return const Scaffold(
+    final method = _methods[_selectedIndex]['label'] as String;
+    final messages = {
+      'Cash': ('Processing...', 'Confirming your cash payment'),
+      'JazzCash': ('Connecting to JazzCash...', 'Verifying your JazzCash account'),
+      'EasyPaisa': ('Connecting to EasyPaisa...', 'Verifying your EasyPaisa account'),
+      'Credit/Debit Card': ('Processing Card...', 'Securely processing your card'),
+      'Bank Transfer': ('Processing Transfer...', 'Confirming bank transfer'),
+    };
+    final (title, subtitle) = messages[method] ?? ('Processing Payment...', 'Please wait');
+    return Scaffold(
       backgroundColor: Colors.white,
       body: Center(
         child: Column(
@@ -207,9 +229,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
           children: [
             CircularProgressIndicator(color: Color(0xFFD42C2C), strokeWidth: 3),
             SizedBox(height: 24),
-            Text('Processing Payment...', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             SizedBox(height: 8),
-            Text('Please wait', style: TextStyle(color: Colors.grey, fontSize: 13)),
+            Text(subtitle, style: TextStyle(color: Colors.grey, fontSize: 13)),
           ],
         ),
       ),
@@ -266,7 +288,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
+                    await context.read<RideProvider>().refreshActiveRide();
+                    if (!context.mounted) return;
                     context.read<RideProvider>().clearActiveRide();
                     Navigator.pushNamedAndRemoveUntil(context, AppRoutes.home, (_) => false);
                   },

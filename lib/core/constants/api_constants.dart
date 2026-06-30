@@ -1,6 +1,6 @@
 class ApiConstants {
   // Toggle this to switch between local and production
-  static const bool useProduction = true;
+  static const bool useProduction = false;
 
   static const String _localBase = 'http://localhost:3001';
   static const String _prodBase = 'https://gleaming-inspiration-production-64dc.up.railway.app';

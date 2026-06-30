@@ -269,7 +269,7 @@ class _DriverRideScreenState extends State<DriverRideScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildInfoChip(Icons.timer_outlined, etaLabel, 'ETA'),
-                _buildInfoChip(Icons.currency_rupee, fareLabel, 'Fare'),
+                _buildInfoChip(Icons.payments_outlined, fareLabel, 'Fare', iconText: 'Rs'),
               ],
             ),
           ),
@@ -370,13 +370,15 @@ class _DriverRideScreenState extends State<DriverRideScreen> {
     );
   }
 
-  Widget _buildInfoChip(IconData icon, String value, String label) {
+  Widget _buildInfoChip(IconData icon, String value, String label, {String? iconText}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 6)]),
       child: Column(
         children: [
-          Icon(icon, color: const Color(0xFFD30000), size: 20),
+          iconText != null
+              ? Text(iconText, style: const TextStyle(color: Color(0xFFD30000), fontSize: 15, fontWeight: FontWeight.bold))
+              : Icon(icon, color: const Color(0xFFD30000), size: 20),
           const SizedBox(height: 4),
           Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
           Text(label, style: TextStyle(color: Colors.grey[500], fontSize: 11)),

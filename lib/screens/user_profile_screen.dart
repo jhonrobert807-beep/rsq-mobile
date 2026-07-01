@@ -157,29 +157,16 @@ class UserProfileScreen extends StatelessWidget {
                   builder: (ctx) => SimpleDialog(
                     title: const Text('Select Language'),
                     children: [
-                      SimpleDialogOption(child: const Text('English'), onPressed: () => Navigator.pop(ctx)),
-                      SimpleDialogOption(child: const Text('اردو (Urdu)'), onPressed: () => Navigator.pop(ctx)),
-                    ],
-                  ),
-                );
-              }),
-            ]),
-
-            // Section 3: Vehicle & Theme Card
-            _buildProfileCard([
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Text('Vehicle Details', style: TextStyle(color: Colors.black87, fontSize: 14)),
-              ),
-              const Divider(height: 1),
-              _buildListTile(Icons.face_retouching_natural_outlined, 'Theme', trailing: 'Light mode', onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (ctx) => SimpleDialog(
-                    title: const Text('Select Theme'),
-                    children: [
-                      SimpleDialogOption(child: const Text('Light mode'), onPressed: () => Navigator.pop(ctx)),
-                      SimpleDialogOption(child: const Text('Dark mode'), onPressed: () => Navigator.pop(ctx)),
+                      SimpleDialogOption(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.check, color: Color(0xFFC62828), size: 18),
+                            SizedBox(width: 8),
+                            Text('English'),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 );
@@ -188,7 +175,39 @@ class UserProfileScreen extends StatelessWidget {
 
             // Section 4: Support Card
             _buildProfileCard([
-              _buildListTile(Icons.people_outline, 'Help & Support', onTap: () {}),
+              _buildListTile(Icons.people_outline, 'Help & Support', onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    title: const Row(
+                      children: [
+                        Icon(Icons.emergency, color: Color(0xFFC62828), size: 22),
+                        SizedBox(width: 8),
+                        Text('Emergency Numbers', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildEmergencyRow('Rescue / Ambulance', '1122'),
+                        const Divider(height: 20),
+                        _buildEmergencyRow('Police', '15'),
+                        const Divider(height: 20),
+                        _buildEmergencyRow('Fire Brigade', '16'),
+                        const Divider(height: 20),
+                        _buildEmergencyRow('Edhi Foundation', '115'),
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Close', style: TextStyle(color: Color(0xFFC62828), fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                );
+              }),
               const Divider(height: 1),
               _buildListTile(Icons.chat_bubble_outline, 'Contact us', onTap: () {}),
               const Divider(height: 1),
@@ -250,6 +269,16 @@ class UserProfileScreen extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade100),
       ),
       child: Column(children: children),
+    );
+  }
+
+  static Widget _buildEmergencyRow(String label, String number) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 14, color: Colors.black87)),
+        Text(number, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFFC62828))),
+      ],
     );
   }
 

@@ -235,15 +235,6 @@ class _DriverProfileScreenState extends State<DriverProfileScreen> {
             ]),
 
             _buildProfileCard([
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Text('Vehicle Details', style: TextStyle(color: Colors.black87, fontSize: 14)),
-              ),
-              const Divider(height: 1),
-              _buildListTile(Icons.face_retouching_natural_outlined, 'Theme', trailing: 'Light mode'),
-            ]),
-
-            _buildProfileCard([
               _buildListTile(Icons.people_outline, 'Help & Support'),
               const Divider(height: 1),
               _buildListTile(Icons.chat_bubble_outline, 'Contact us'),

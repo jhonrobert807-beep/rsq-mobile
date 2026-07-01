@@ -250,44 +250,15 @@ class _BookingCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            price,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontFamily: 'Roboto',
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          SizedBox(
-                            height: 32,
-                            child: ElevatedButton.icon(
-                              onPressed: ride.isCompleted ? () {} : null,
-                              icon: const Icon(Icons.refresh, size: 14),
-                              label: const Text(
-                                'Rebook',
-                                style: TextStyle(
-                                  fontFamily: 'Roboto',
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFC62828),
-                                disabledBackgroundColor: Colors.grey[300],
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                              ),
-                            ),
-                          ),
-                        ],
+                      Text(
+                        price,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: 'Roboto',
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                     ],
                   ),

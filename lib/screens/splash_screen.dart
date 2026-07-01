@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:dio/dio.dart';
 import '../routes/app_routes.dart';
 import '../providers/auth_provider.dart';
 import '../services/auth_api.dart';
@@ -32,8 +33,16 @@ class _SplashScreenState extends State<SplashScreen> {
         context.read<AuthProvider>().updateUser(user);
         _navigateByRole(user.role);
         return;
+      } on DioException catch (e) {
+        // Only log out on 401 — token is genuinely invalid/expired
+        if (e.response?.statusCode == 401) {
+          await StorageService.clearAll();
+        } else {
+          // Network error or server down — don't log out, go to welcome temporarily
+          // but keep the token so next launch re-tries
+        }
       } catch (_) {
-        await StorageService.clearAll();
+        // Unknown error — keep session, show welcome as fallback
       }
     }
     if (mounted) Navigator.pushReplacementNamed(context, AppRoutes.welcome);

@@ -114,13 +114,13 @@ class _SignupScreenState extends State<SignupScreen> {
     final role = context.read<AuthProvider>().currentUser?.role ?? 'USER';
     switch (role) {
       case 'DRIVER':
-        Navigator.pushReplacementNamed(context, AppRoutes.driverHomeScreen);
+        Navigator.pushNamedAndRemoveUntil(context, AppRoutes.driverHomeScreen, (_) => false);
         break;
       case 'PARAMEDIC':
-        Navigator.pushReplacementNamed(context, AppRoutes.paramedicHomeScreen);
+        Navigator.pushNamedAndRemoveUntil(context, AppRoutes.paramedicHomeScreen, (_) => false);
         break;
       default:
-        Navigator.pushReplacementNamed(context, AppRoutes.home);
+        Navigator.pushNamedAndRemoveUntil(context, AppRoutes.home, (_) => false);
     }
   }
 

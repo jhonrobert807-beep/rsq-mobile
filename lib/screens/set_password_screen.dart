@@ -225,7 +225,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                     elevation: 0,
                   ),
                   onPressed: () {
-                    Navigator.pushNamed(context, AppRoutes.home);
+                    Navigator.pushNamedAndRemoveUntil(context, AppRoutes.home, (_) => false);
                   },
                   child: const Text(
                     'Register',

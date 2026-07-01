@@ -16,6 +16,7 @@ class _NotificationsSettingsScreenState extends State<NotificationsSettingsScree
   bool _isLoading = false;
   String? _errorMessage;
   bool _isSaving = false;
+  bool _prefsLoaded = false;
 
   @override
   void initState() {
@@ -27,7 +28,15 @@ class _NotificationsSettingsScreenState extends State<NotificationsSettingsScree
       'paymentReminders': true,
       'systemNotifications': true,
     };
-    _loadPreferences();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_prefsLoaded) {
+      _prefsLoaded = true;
+      _loadPreferences();
+    }
   }
 
   Future<void> _loadPreferences() async {
@@ -93,16 +102,19 @@ class _NotificationsSettingsScreenState extends State<NotificationsSettingsScree
   }
 
   void _showError(String message) {
+    if (!mounted) return;
     setState(() => _errorMessage = message);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.red.shade700,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.red.shade700,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    });
   }
 
   void _showSuccess(String message) {

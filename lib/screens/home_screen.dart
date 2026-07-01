@@ -18,6 +18,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   Timer? _pollTimer;
+  DateTime? _lastBackPress;
 
   @override
   void initState() {
@@ -69,7 +70,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
     context.watch<AuthProvider>();
 
-    return Scaffold(
+    return WillPopScope(
+      onWillPop: () async {
+        final now = DateTime.now();
+        if (_lastBackPress == null || now.difference(_lastBackPress!) > const Duration(seconds: 2)) {
+          _lastBackPress = now;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Press back again to exit'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+          return false;
+        }
+        return true;
+      },
+      child: Scaffold(
       key: _scaffoldKey,
       backgroundColor: Colors.white,
       drawer: _buildSideDrawer(context),
@@ -101,6 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 

@@ -190,7 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _drawerItem(
             Icons.payment,
             'Manage Payment Methods',
-            () => Navigator.pushReplacementNamed(
+            () => Navigator.pushNamed(
               context,
               AppRoutes.paymentMethodScreen,
             ),

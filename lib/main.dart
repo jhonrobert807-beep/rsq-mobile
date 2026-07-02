@@ -3,13 +3,16 @@ import 'package:provider/provider.dart';
 import 'config/theme.dart';
 import 'routes/app_routes.dart';
 import 'services/api_service.dart';
+import 'services/card_store.dart';
 import 'providers/auth_provider.dart';
 import 'providers/ride_provider.dart';
 import 'providers/chat_provider.dart';
 import 'providers/tracking_provider.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   ApiService.init();
+  await CardStore.instance.load();
   runApp(const MyApp());
 }
 

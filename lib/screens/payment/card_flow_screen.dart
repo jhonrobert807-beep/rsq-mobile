@@ -24,7 +24,7 @@ class _CardFlowScreenState extends State<CardFlowScreen> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final number = _cardNumberCtrl.text.trim();
     final name = _holderNameCtrl.text.trim();
     final expiry = _expiryCtrl.text.trim();
@@ -36,7 +36,7 @@ class _CardFlowScreenState extends State<CardFlowScreen> {
       return;
     }
 
-    CardStore.instance.addCard(SavedCard(
+    await CardStore.instance.addCard(SavedCard(
       number: number,
       holderName: name,
       expiry: expiry,

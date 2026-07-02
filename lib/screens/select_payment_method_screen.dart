@@ -173,8 +173,8 @@ class _SelectPaymentMethodScreenState extends State<SelectPaymentMethodScreen> {
                                   ),
                                   if (isSavedCard)
                                     GestureDetector(
-                                      onTap: () {
-                                        CardStore.instance.removeCard(cardIndex);
+                                      onTap: () async {
+                                        await CardStore.instance.removeCard(cardIndex);
                                         if (_selectedPayment >= _buildAllMethods().length) {
                                           _selectedPayment = 0;
                                         }

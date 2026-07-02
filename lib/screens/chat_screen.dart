@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/chat_api.dart';
+import '../services/ride_api.dart';
 import '../services/socket_service.dart';
 import '../models/chat_message_model.dart';
 import '../core/errors/app_exception.dart';
@@ -34,6 +35,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isLoading = false;
   bool _isSending = false;
   bool _isSocketConnected = false;
+  bool _rideClosed = false;
   Timer? _pollTimer;
   String? _currentUserId;
 
@@ -75,11 +77,29 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _pollMessages() async {
-    if (!mounted) return;
+    if (!mounted || _rideClosed) return;
     try {
+      // Check if ride is still active
+      final ride = await RideApi.getRide(widget.rideRequestId);
+      if (!mounted) return;
+      final status = ride.status;
+      if (status == 'COMPLETED' || status == 'CANCELLED') {
+        _rideClosed = true;
+        _pollTimer?.cancel();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(status == 'COMPLETED' ? 'Ride completed. Chat closed.' : 'Ride was cancelled. Chat closed.'),
+            backgroundColor: Colors.grey[800],
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        await Future.delayed(const Duration(seconds: 3));
+        if (mounted) Navigator.pop(context);
+        return;
+      }
+
       final messages = await ChatApi.getRideMessages(widget.rideRequestId);
       if (!mounted) return;
-      // Only add messages we haven't seen yet — never clear the list
       final newMessages = messages.where((m) => !_messageIds.contains(m.id)).toList();
       if (newMessages.isNotEmpty) {
         for (final m in newMessages) _messageIds.add(m.id);
@@ -229,6 +249,15 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   ),
           ),
+          if (_rideClosed)
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: Colors.grey[200],
+            child: const Center(
+              child: Text('Chat closed — ride ended', style: TextStyle(color: Colors.grey, fontSize: 13)),
+            ),
+          )
+        else
           _buildInputBar(),
         ],
       ),

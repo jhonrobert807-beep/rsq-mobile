@@ -19,4 +19,10 @@ class CardStore {
   void addCard(SavedCard card) {
     _cards.add(card);
   }
+
+  void removeCard(int index) {
+    if (index >= 0 && index < _cards.length) {
+      _cards.removeAt(index);
+    }
+  }
 }

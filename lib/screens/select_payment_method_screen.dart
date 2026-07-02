@@ -144,6 +144,8 @@ class _SelectPaymentMethodScreenState extends State<SelectPaymentMethodScreen> {
                       ...List.generate(_buildAllMethods().length, (index) {
                         final pm = _buildAllMethods()[index];
                         final isSelected = _selectedPayment == index;
+                        final isSavedCard = index >= _staticMethods.length;
+                        final cardIndex = index - _staticMethods.length;
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 16),
                           child: GestureDetector(
@@ -169,6 +171,21 @@ class _SelectPaymentMethodScreenState extends State<SelectPaymentMethodScreen> {
                                       ],
                                     ),
                                   ),
+                                  if (isSavedCard)
+                                    GestureDetector(
+                                      onTap: () {
+                                        CardStore.instance.removeCard(cardIndex);
+                                        if (_selectedPayment >= _buildAllMethods().length) {
+                                          _selectedPayment = 0;
+                                        }
+                                        setState(() {});
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(left: 8),
+                                        child: Icon(Icons.delete_outline, color: Colors.red[400], size: 20),
+                                      ),
+                                    )
+                                  else
                                   Container(
                                     width: 20,
                                     height: 20,

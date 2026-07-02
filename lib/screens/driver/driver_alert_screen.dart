@@ -22,12 +22,19 @@ class _DriverAlertScreenState extends State<DriverAlertScreen> {
     try {
       await RideApi.acceptRide(ride.id);
       if (mounted) Navigator.pushReplacementNamed(context, AppRoutes.driverRideScreen);
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
+        final msg = e.toString().toLowerCase();
+        final isCancelled = msg.contains('cancel') || msg.contains('waiting_driver_accept') || msg.contains('invalid');
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to accept ride. Try again.'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(isCancelled ? 'This ride was cancelled by the patient.' : 'Failed to accept ride. Try again.'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
         );
-        setState(() => _isLoading = false);
+        await Future.delayed(const Duration(seconds: 3));
+        if (mounted) Navigator.pushReplacementNamed(context, AppRoutes.driverHomeScreen);
       }
     }
   }

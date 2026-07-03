@@ -22,6 +22,7 @@ class UserRideDetailsScreen extends StatefulWidget {
 class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
   Timer? _pollTimer;
   bool _ratingShown = false;
+  bool _restoreFailed = false;
   List<LatLng> _routePoints = [];
 
   @override
@@ -37,6 +38,12 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
         _onRideCompleted(ride.id);
         return;
       }
+      if (ride.isFailedNoDriver) {
+        _pollTimer?.cancel();
+        _pollTimer = null;
+        _onNoDriverAvailable();
+        return;
+      }
       await context.read<RideProvider>().refreshActiveRide();
       if (!mounted) return;
       final updated = context.read<RideProvider>().activeRide;
@@ -44,17 +51,33 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
         _pollTimer?.cancel();
         _pollTimer = null;
         _onRideCompleted(updated.id);
+      } else if (updated != null && updated.isFailedNoDriver) {
+        _pollTimer?.cancel();
+        _pollTimer = null;
+        _onNoDriverAvailable();
       }
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (context.read<RideProvider>().activeRide == null) {
+        await context.read<RideProvider>().restoreActiveRideIfNeeded();
+        if (!mounted) return;
+        if (context.read<RideProvider>().activeRide == null) {
+          setState(() => _restoreFailed = true);
+          return;
+        }
+      }
       _connectChatBackground();
       _fetchRoute();
-      // Handle case where ride is already completed when screen opens
+      // Handle case where ride is already completed or failed when screen opens
       final ride = context.read<RideProvider>().activeRide;
       if (ride != null && ride.isCompleted) {
         _pollTimer?.cancel();
         _pollTimer = null;
         _onRideCompleted(ride.id);
+      } else if (ride != null && ride.isFailedNoDriver) {
+        _pollTimer?.cancel();
+        _pollTimer = null;
+        _onNoDriverAvailable();
       }
     });
   }
@@ -62,6 +85,31 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
   void _onRideCompleted(String rideId) {
     if (!mounted || _ratingShown) return;
     _showRatingDialog(rideId);
+  }
+
+  bool _noDriverDialogShown = false;
+
+  Future<void> _onNoDriverAvailable() async {
+    if (!mounted || _noDriverDialogShown) return;
+    _noDriverDialogShown = true;
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('No Driver Available'),
+        content: const Text('No ambulance is available right now. Please try booking again in a few minutes.'),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD42C2C)),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    context.read<RideProvider>().clearActiveRide();
+    Navigator.pushReplacementNamed(context, AppRoutes.home);
   }
 
   void _connectChatBackground() {
@@ -196,6 +244,24 @@ class _UserRideDetailsScreenState extends State<UserRideDetailsScreen> {
     final ride = context.watch<RideProvider>().activeRide;
 
     if (ride == null) {
+      if (_restoreFailed) {
+        return Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('No active ride found.', style: TextStyle(fontSize: 16, color: Color(0xFF1A1A1A))),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD42C2C)),
+                  onPressed: () => Navigator.pushReplacementNamed(context, AppRoutes.home),
+                  child: const Text('Go Home', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
       return const Scaffold(
         body: Center(child: CircularProgressIndicator(color: Color(0xFFD42C2C))),
       );

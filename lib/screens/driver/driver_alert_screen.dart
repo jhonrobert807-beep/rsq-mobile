@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -14,10 +15,50 @@ class DriverAlertScreen extends StatefulWidget {
 
 class _DriverAlertScreenState extends State<DriverAlertScreen> {
   bool _isLoading = false;
+  Timer? _statusPollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startStatusPolling();
+  }
+
+  @override
+  void dispose() {
+    _statusPollTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startStatusPolling() {
+    _statusPollTimer = Timer.periodic(const Duration(seconds: 3), (_) => _checkRideStillWaiting());
+  }
+
+  Future<void> _checkRideStillWaiting() async {
+    if (_isLoading || !mounted) return;
+    final ride = context.read<RideProvider>().activeRide;
+    if (ride == null) return;
+    try {
+      final latest = await RideApi.getRide(ride.id);
+      if (latest.status != 'WAITING_DRIVER_ACCEPT' && mounted) {
+        _statusPollTimer?.cancel();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This ride was cancelled by the patient.'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        Navigator.pushReplacementNamed(context, AppRoutes.driverHomeScreen);
+      }
+    } catch (_) {
+      // Ignore transient poll failures; next tick will retry.
+    }
+  }
 
   Future<void> _accept() async {
     final ride = context.read<RideProvider>().activeRide;
     if (ride == null) return;
+    _statusPollTimer?.cancel();
     setState(() => _isLoading = true);
     try {
       await RideApi.acceptRide(ride.id);
@@ -40,6 +81,7 @@ class _DriverAlertScreenState extends State<DriverAlertScreen> {
   }
 
   Future<void> _reject() async {
+    _statusPollTimer?.cancel();
     final ride = context.read<RideProvider>().activeRide;
     if (ride == null) { Navigator.pop(context); return; }
     try {

@@ -87,6 +87,7 @@ class RideRequestModel {
   bool get isActive => ['CREATED', 'DISPATCHING', 'WAITING_DRIVER_ACCEPT', 'DRIVER_ACCEPTED', 'DRIVER_ARRIVED', 'IN_TRIP'].contains(status);
   bool get isCompleted => status == 'COMPLETED';
   bool get isCancelled => status == 'CANCELLED';
+  bool get isFailedNoDriver => status == 'FAILED_NO_DRIVER';
 
   String get formattedCost => cost != null ? 'PKR ${cost!.toStringAsFixed(0)}' : 'Calculating...';
   String get formattedEta => etaMinutes != null ? '$etaMinutes min' : '--';

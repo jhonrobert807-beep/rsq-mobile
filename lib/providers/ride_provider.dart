@@ -134,6 +134,21 @@ class RideProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> restoreActiveRideIfNeeded() async {
+    if (_activeRide != null) return;
+    try {
+      final rides = await RideApi.getMyRides();
+      final candidate = rides.where((r) => r.isActive || r.isFailedNoDriver).toList()
+        ..sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
+      if (candidate.isNotEmpty) {
+        _activeRide = candidate.first;
+        notifyListeners();
+      }
+    } catch (_) {
+      // Leave activeRide null; caller handles the empty state.
+    }
+  }
+
   Future<void> refreshActiveRide() async {
     if (_activeRide == null) return;
     try {

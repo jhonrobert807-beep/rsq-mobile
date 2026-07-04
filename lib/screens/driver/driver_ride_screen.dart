@@ -21,6 +21,7 @@ class DriverRideScreen extends StatefulWidget {
 class _DriverRideScreenState extends State<DriverRideScreen> {
   bool _isEnding = false;
   bool _isStarting = false;
+  bool _cancelledDialogShown = false;
   Timer? _pollTimer;
   List<LatLng> _routePoints = [];
 
@@ -81,8 +82,36 @@ class _DriverRideScreenState extends State<DriverRideScreen> {
     if (ride == null) return;
     try {
       final updated = await RideApi.getRide(ride.id);
-      if (mounted) context.read<RideProvider>().setActiveRide(updated);
+      if (!mounted) return;
+      context.read<RideProvider>().setActiveRide(updated);
+      if (updated.isCancelled) {
+        _pollTimer?.cancel();
+        _onRideCancelledByPatient();
+      }
     } catch (_) {}
+  }
+
+  Future<void> _onRideCancelledByPatient() async {
+    if (!mounted || _cancelledDialogShown) return;
+    _cancelledDialogShown = true;
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Ride Cancelled'),
+        content: const Text('This ride was cancelled by the patient.'),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD42C2C)),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    context.read<RideProvider>().clearActiveRide();
+    Navigator.pushReplacementNamed(context, AppRoutes.driverHomeScreen);
   }
 
   Future<void> _startRide() async {

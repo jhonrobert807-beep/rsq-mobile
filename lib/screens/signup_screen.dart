@@ -41,7 +41,8 @@ class _SignupScreenState extends State<SignupScreen> {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final rawPhone = _phoneController.text.trim();
-    final phone = rawPhone.isNotEmpty ? '+92$rawPhone' : '';
+    final localPhone = rawPhone.startsWith('0') ? rawPhone.substring(1) : rawPhone;
+    final phone = localPhone.isNotEmpty ? '+92$localPhone' : '';
     final password = _passwordController.text;
 
     if (name.length < 2) {
@@ -50,6 +51,10 @@ class _SignupScreenState extends State<SignupScreen> {
     }
     if (email.isEmpty && rawPhone.isEmpty) {
       _showError('Please enter your email or phone number');
+      return;
+    }
+    if (rawPhone.isNotEmpty && !RegExp(r'^3\d{9}$').hasMatch(localPhone)) {
+      _showError('Please enter a valid Pakistani mobile number');
       return;
     }
     if (password.length < 8) {

@@ -209,9 +209,31 @@ class UserProfileScreen extends StatelessWidget {
                 );
               }),
               const Divider(height: 1),
-              _buildListTile(Icons.chat_bubble_outline, 'Contact us', onTap: () {}),
+              _buildListTile(Icons.chat_bubble_outline, 'Contact us', onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    title: const Row(
+                      children: [
+                        Icon(Icons.chat_bubble_outline, color: Color(0xFFC62828), size: 22),
+                        SizedBox(width: 8),
+                        Text('Contact Us', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    content: _buildEmergencyRow('ResQLink Support', '+92 311 2153591'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Close', style: TextStyle(color: Color(0xFFC62828), fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                );
+              }),
               const Divider(height: 1),
-              _buildListTile(Icons.lock_outline, 'Privacy policy', onTap: () {}),
+              _buildListTile(Icons.lock_outline, 'Privacy policy',
+                  onTap: () => Navigator.pushNamed(context, AppRoutes.privacyPolicy)),
             ]),
             const SizedBox(height: 20),
           ],

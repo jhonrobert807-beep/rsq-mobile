@@ -3,9 +3,11 @@ class ApiConstants {
   static const bool useProduction = true;
 
   static const String _localBase = 'http://localhost:3001';
-  static const String _prodBase = 'https://gleaming-inspiration-production-64dc.up.railway.app';
+  static const String _prodBase =
+      'https://gleaming-inspiration-production-64dc.up.railway.app';
 
-  static String get baseUrl => (useProduction ? _prodBase : _localBase) + '/api';
+  static String get baseUrl =>
+      (useProduction ? _prodBase : _localBase) + '/api';
   static String get socketUrl => useProduction ? _prodBase : _localBase;
 
   // Auth
